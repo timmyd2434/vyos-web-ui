@@ -145,7 +145,6 @@ export default function Dashboard() {
             </div>
 
             {/* Charts Row */}
-            {/*
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {loadHistory.length > 0 ? (
                     <MetricAreaChart data={loadHistory} title="Load Average History" color="#3b82f6" unit="" />
@@ -162,10 +161,8 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
-            */}
 
             {/* Interface Charts Grid */}
-            {/* 
             {charbableInterfaces.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium text-white">Interface Traffic</h3>
@@ -180,7 +177,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
-            */}
 
             {/* Interface List Preview */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
