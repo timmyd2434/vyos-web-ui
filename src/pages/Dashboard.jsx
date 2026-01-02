@@ -146,8 +146,20 @@ export default function Dashboard() {
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <MetricAreaChart data={loadHistory} title="Load Average History" color="#3b82f6" unit="" />
-                <MetricAreaChart data={memHistory} title="Memory Usage History" color="#10b981" unit="%" />
+                {loadHistory.length > 0 ? (
+                    <MetricAreaChart data={loadHistory} title="Load Average History" color="#3b82f6" unit="" />
+                ) : (
+                    <div className="h-64 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center justify-center text-slate-500">
+                        Waiting for Load data...
+                    </div>
+                )}
+                {memHistory.length > 0 ? (
+                    <MetricAreaChart data={memHistory} title="Memory Usage History" color="#10b981" unit="%" />
+                ) : (
+                    <div className="h-64 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center justify-center text-slate-500">
+                        Waiting for Memory data...
+                    </div>
+                )}
             </div>
 
             {/* Interface Charts Grid */}
