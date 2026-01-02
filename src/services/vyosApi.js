@@ -27,12 +27,26 @@ const createClient = (baseUrl) => {
  * @param {object} opData - Operation data (e.g. { op: "showConfig", path: [] })
  */
 export const retrieve = async (url, key, opData) => {
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(opData));
-    formData.append('key', key);
+    try {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(opData));
+        formData.append('key', key);
 
-    const response = await axios.post(`${url}${ENDPOINTS.RETRIEVE}`, formData);
-    return response.data;
+        const response = await axios.post(`${url}${ENDPOINTS.RETRIEVE}`, formData);
+        return response.data;
+    } catch (error) {
+        console.error("VyOS Retrieve Error:", error);
+        if (error.response) {
+            console.error("Status:", error.response.status);
+            console.error("Data:", error.response.data);
+            console.error("Headers:", error.response.headers);
+        } else if (error.request) {
+            console.error("No response received. Request:", error.request);
+        } else {
+            console.error("Error setting up request:", error.message);
+        }
+        throw error;
+    }
 };
 
 /**
