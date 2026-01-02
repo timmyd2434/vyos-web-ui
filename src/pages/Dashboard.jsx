@@ -180,6 +180,11 @@ export default function Dashboard() {
                     )}
                 </div>
             </div>
+            {/* Debugging Raw Op Data */}
+            <div className="bg-black/50 p-4 rounded text-xs font-mono text-green-400 overflow-auto max-h-40">
+                <p className="text-white mb-1">Debug - Raw Op Data:</p>
+                {typeof opData === 'string' ? opData : JSON.stringify(opData, null, 2)}
+            </div>
         </div>
     );
 }
