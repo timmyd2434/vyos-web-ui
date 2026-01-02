@@ -18,6 +18,9 @@ export default function DhcpConfig() {
     // State for expanded networks
     const [expanded, setExpanded] = useState({});
 
+    // State for pending networks (created in UI but not yet committed to VyOS)
+    const [pendingNetworks, setPendingNetworks] = useState([]);
+
     // Modal State
     const [modal, setModal] = useState({ type: null, isOpen: false, data: null, parent: null });
 
@@ -25,15 +28,21 @@ export default function DhcpConfig() {
         setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
     };
 
-    // Transform data object to array
-    const networks = data ? Object.entries(data).map(([name, config]) => ({
+    // Transform VyOS data to array
+    const vyosNetworks = data ? Object.entries(data).map(([name, config]) => ({
         name,
         description: config.description || '',
         subnets: config.subnet ? Object.entries(config.subnet).map(([cidr, subConfig]) => ({
             cidr,
             ...subConfig
-        })) : []
+        })) : [],
+        isPending: false
     })) : [];
+
+    // Merge VyOS networks with pending UI-only networks
+    // Remove pending networks that now exist in VyOS
+    const activePending = pendingNetworks.filter(p => !vyosNetworks.some(v => v.name === p.name));
+    const networks = [...vyosNetworks, ...activePending];
 
     const openCreateNetwork = () => setModal({ type: 'network', isOpen: true, data: null });
     const openEditNetwork = (net) => setModal({ type: 'network', isOpen: true, data: net });
@@ -50,27 +59,46 @@ export default function DhcpConfig() {
         // VyOS DHCP networks must have at least one subnet to be valid
         // We can't create an empty shared-network-name, even with a description
         // Strategy:
-        // - New network: Don't stage any commands. User must add subnet first.
+        // - New network: Add to pending list (UI only) until first subnet
         // - Editing existing network: Allow setting/updating description
-        
+
         if (modal.data) {
-            // Editing existing network - can update description
-            if (description && description.trim()) {
-                stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description', description] });
-            } else if (modal.data.description) {
-                // User cleared the description
-                stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description'] });
+            // Editing existing network
+            if (modal.data.isPending) {
+                // Update pending network
+                setPendingNetworks(prev => prev.map(net =>
+                    net.name === name ? { ...net, description } : net
+                ));
+            } else {
+                // Update VyOS network description
+                if (description && description.trim()) {
+                    stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description', description] });
+                } else if (modal.data.description) {
+                    stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description'] });
+                }
             }
+        } else {
+            // New network - add to pending list
+            setPendingNetworks(prev => [...prev, {
+                name,
+                description: description || '',
+                subnets: [],
+                isPending: true
+            }]);
         }
-        // For new networks: don't stage anything
-        // The network will be created when the first subnet is added
 
         closeModal();
     };
 
-    const handleDeleteNetwork = (name) => {
-        if (confirm(`Delete shared network ${name} and all its subnets?`)) {
-            stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', name] });
+    const handleDeleteNetwork = (net) => {
+        if (confirm(`Delete shared network ${net.name} and all its subnets?`)) {
+            if (net.isPending) {
+                // Remove from pending list
+                setPendingNetworks(prev => prev.filter(n => n.name !== net.name));
+            } else {
+                // Delete from VyOS
+                stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', net.name] });
+            }
         }
     };
 
@@ -79,9 +107,18 @@ export default function DhcpConfig() {
         const netName = modal.parent;
         const basePath = ['service', 'dhcp-server', 'shared-network-name', netName, 'subnet', cidr];
 
+        // Check if parent network is pending (UI-only)
+        const parentNetwork = networks.find(n => n.name === netName);
+        const isPendingParent = parentNetwork?.isPending;
+
+        // If parent network was pending, also set its description if it has one
+        if (isPendingParent && parentNetwork.description) {
+            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', netName, 'description', parentNetwork.description] });
+        }
+
         // VyOS requires at least one property on a subnet to create the node
         // Setting any property will automatically create parent network + subnet nodes
-        
+
         // Range (most common - set first)
         if (rangeStart && rangeStop) {
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'start', rangeStart] });
@@ -202,7 +239,7 @@ export default function DhcpConfig() {
                                     <Edit className="w-4 h-4" />
                                 </button>
                                 <button
-                                    onClick={() => handleDeleteNetwork(net.name)}
+                                    onClick={() => handleDeleteNetwork(net)}
                                     className="p-1.5 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                                     title="Delete Network"
                                 >
