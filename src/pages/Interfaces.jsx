@@ -158,15 +158,14 @@ export default function Interfaces() {
                                             : iface.address || "-"}
                                     </td>
                                     <td className="px-6 py-4">
-                                        {/* Check iface.state or iface.status depending on JSON */}
-                                        {/* Assuming "up" / "down" string */}
+                                        {/* Check for disabled flag in config. default is Up if not disabled. */}
                                         <span className={clsx(
                                             "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                                            (iface.state === 'up' || iface.status === 'up')
+                                            (!iface.disable && iface.disable !== '')
                                                 ? "bg-emerald-500/10 text-emerald-400"
                                                 : "bg-red-500/10 text-red-400"
                                         )}>
-                                            {(iface.state || iface.status || "Unknown").toUpperCase()}
+                                            {(!iface.disable && iface.disable !== '') ? "UP" : "DISABLED"}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-slate-400 text-sm">
