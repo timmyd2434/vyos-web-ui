@@ -1,4 +1,3 @@
-```javascript
 import { useState, useEffect } from 'react';
 import { useConfig } from '../context/ConfigContext';
 import { Save, AlertTriangle } from 'lucide-react';
@@ -64,14 +63,11 @@ export default function InterfaceForm({ initialData, onClose, onSuccess }) {
                         path: [...basePath, 'address', addr]
                     });
                 });
-            } else {
-                // handle clearing address if editing? Complex without 'delete' first.
-                // For MVP assume set.
             }
 
             const desc = initialData
-                ? `Update interface $ {formData.name}`
-                : `Create interface $ {formData.name}`;
+                ? `Update interface ${formData.name}`
+                : `Create interface ${formData.name}`;
 
             addChange(desc, operations);
 
@@ -180,4 +176,3 @@ export default function InterfaceForm({ initialData, onClose, onSuccess }) {
         </form>
     );
 }
-```

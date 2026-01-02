@@ -1,4 +1,3 @@
-```javascript
 import { useState } from 'react';
 import { useVyosOperational } from '../hooks/useVyosData';
 import { Shield, Plus, Filter, Info } from 'lucide-react';
@@ -30,13 +29,13 @@ export default function Firewall() {
 
     if (selectedRuleset) {
         return (
-            <RuleBuilder 
-              rulesetName={selectedRuleset.name} 
-              rulesetData={selectedRuleset.rawData} 
-              onBack={() => {
-                  setSelectedRuleset(null);
-                  refetch(); // refresh data when returning
-              }}
+            <RuleBuilder
+                rulesetName={selectedRuleset.name}
+                rulesetData={selectedRuleset.rawData}
+                onBack={() => {
+                    setSelectedRuleset(null);
+                    refetch(); // refresh data when returning
+                }}
             />
         );
     }
@@ -66,8 +65,8 @@ export default function Firewall() {
                 )}
 
                 {rulesets.map((rs) => (
-                    <div 
-                        key={rs.name} 
+                    <div
+                        key={rs.name}
                         onClick={() => setSelectedRuleset(rs)}
                         className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition-colors group cursor-pointer"
                     >
@@ -76,9 +75,8 @@ export default function Firewall() {
                                 <h3 className="text-lg font-bold text-white">{rs.name}</h3>
                                 <p className="text-sm text-slate-400">{rs.description || "No description"}</p>
                             </div>
-                            <div className={`px - 2 py - 1 rounded text - xs font - mono font - bold uppercase ${
-    rs.defaultAction === 'accept' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
-} `}>
+                            <div className={`px-2 py-1 rounded text-xs font-mono font-bold uppercase ${rs.defaultAction === 'accept' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                                }`}>
                                 Default: {rs.defaultAction}
                             </div>
                         </div>
