@@ -10,15 +10,16 @@ export const useTrafficRate = (countersObj) => {
     const prevCountersRef = useRef({});
     const lastTimeRef = useRef(Date.now());
 
+    // Use stringified dependency to prevent infinite loops on object ref changes
+    const countersHash = JSON.stringify(countersObj);
+
     useEffect(() => {
         if (!countersObj || Object.keys(countersObj).length === 0) return;
 
         const now = Date.now();
         const deltaSeconds = (now - lastTimeRef.current) / 1000;
 
-        // Ignore valid updates that are suspiciously fast (< 0.5s) to avoid div/0 spikes
-        // But for identical data (no change), we DO want to process (rate = 0)
-        // Actually, if countersObj changes, it's a new snapshot. 
+        // Ignore valid updates that are suspiciously fast (< 0.1s)
         if (deltaSeconds < 0.1) return;
 
         const newRates = {};
@@ -46,7 +47,7 @@ export const useTrafficRate = (countersObj) => {
         lastTimeRef.current = now;
         setRates(newRates);
 
-    }, [countersObj]);
+    }, [countersHash]); // Deep compare dependency
 
     return rates;
 };
@@ -93,6 +94,9 @@ export const useHistory = (value, maxPoints = 20) => {
 export const useMultiHistory = (dataMap, maxPoints = 20) => {
     const [histories, setHistories] = useState({});
 
+    // Deep compare dependency
+    const dataHash = JSON.stringify(dataMap);
+
     useEffect(() => {
         if (!dataMap || Object.keys(dataMap).length === 0) return;
 
@@ -115,7 +119,7 @@ export const useMultiHistory = (dataMap, maxPoints = 20) => {
             });
             return next;
         });
-    }, [dataMap, maxPoints]);
+    }, [dataHash, maxPoints]);
 
     return histories;
 };
