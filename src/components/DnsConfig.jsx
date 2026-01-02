@@ -8,7 +8,8 @@ export default function DnsConfig() {
     const { data: config, isLoading, refetch, isRefetching } = useVyosOperational(
         ['service', 'dns', 'forwarding'],
         ['service', 'dns', 'forwarding'],
-        'showConfig'
+        'showConfig',
+        { refetchInterval: false }
     );
 
     const { stageCommand, isStaged } = useConfig();

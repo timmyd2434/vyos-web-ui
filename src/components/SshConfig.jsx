@@ -8,7 +8,8 @@ export default function SshConfig() {
     const { data: config, isLoading, refetch, isRefetching } = useVyosOperational(
         ['service', 'ssh'],
         ['service', 'ssh'],
-        'showConfig'
+        'showConfig',
+        { refetchInterval: false }
     );
 
     const { stageCommand } = useConfig();

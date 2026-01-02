@@ -10,7 +10,8 @@ export default function DhcpConfig() {
     const { data, isLoading } = useVyosOperational(
         ['service', 'dhcp-server', 'shared-network-name'],
         ['service', 'dhcp-server'],
-        'showConfig'
+        'showConfig',
+        { refetchInterval: false }
     );
     const { stageCommand } = useConfig();
 
