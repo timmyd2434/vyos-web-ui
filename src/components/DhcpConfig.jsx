@@ -48,22 +48,22 @@ export default function DhcpConfig() {
         const { name, description } = formData;
 
         // VyOS DHCP networks must have at least one subnet to be valid
-        // We can't create an empty shared-network-name
+        // We can't create an empty shared-network-name, even with a description
         // Strategy:
-        // - If description provided: set it (this creates the network node)
-        // - If no description and new network: don't stage anything yet
-        //   (the network will be created when the first subnet is added)
-        // - If editing and clearing description: delete it
+        // - New network: Don't stage any commands. User must add subnet first.
+        // - Editing existing network: Allow setting/updating description
         
-        if (description && description.trim()) {
-            // Setting description will implicitly create the network node
-            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description', description] });
-        } else if (modal.data && modal.data.description) {
-            // User cleared the description in edit mode, delete it
-            stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description'] });
+        if (modal.data) {
+            // Editing existing network - can update description
+            if (description && description.trim()) {
+                stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description', description] });
+            } else if (modal.data.description) {
+                // User cleared the description
+                stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description'] });
+            }
         }
-        // If new network with no description: don't stage any command
-        // The network node will be created automatically when first subnet is added
+        // For new networks: don't stage anything
+        // The network will be created when the first subnet is added
 
         closeModal();
     };
@@ -79,16 +79,15 @@ export default function DhcpConfig() {
         const netName = modal.parent;
         const basePath = ['service', 'dhcp-server', 'shared-network-name', netName, 'subnet', cidr];
 
-        // VyOS requires at least one property on a subnet
-        // We'll always set something to ensure the subnet node is created
+        // VyOS requires at least one property on a subnet to create the node
+        // Setting any property will automatically create parent network + subnet nodes
         
-        // Range (Simple implementation: use range '0')
-        // Setting range will create the parent network and subnet nodes
+        // Range (most common - set first)
         if (rangeStart && rangeStop) {
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'start', rangeStart] });
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'stop', rangeStop] });
-        } else if (!modal.data) {
-            // New subnet with no range - delete any existing range
+        } else if (modal.data?.range) {
+            // Editing: user removed range
             stageCommand({ op: 'delete', path: [...basePath, 'range', '0'] });
         }
 
@@ -99,28 +98,25 @@ export default function DhcpConfig() {
             stageCommand({ op: 'delete', path: [...basePath, 'default-router'] });
         }
 
-        // Name Server (handling list)
+        // Name Servers
         const nsArray = Array.isArray(nameServer) ? nameServer.filter(Boolean) : (nameServer ? [nameServer] : []);
         if (nsArray.length > 0) {
-            // Delete existing first, then add new ones
-            stageCommand({ op: 'delete', path: [...basePath, 'name-server'] });
+            if (modal.data?.['name-server']) {
+                stageCommand({ op: 'delete', path: [...basePath, 'name-server'] });
+            }
             nsArray.forEach(ns => {
                 if (ns.trim()) {
                     stageCommand({ op: 'set', path: [...basePath, 'name-server', ns.trim()] });
                 }
             });
         } else if (modal.data?.['name-server']) {
-            // Clear existing name servers
             stageCommand({ op: 'delete', path: [...basePath, 'name-server'] });
         }
 
-        // Ensure at least one property is set for new subnets
-        // If none of the above set anything, we need to set something to create the node
-        // We'll set an empty 'description' as a placeholder
+        // Ensure new subnets have at least one property
         const hasAnyProperty = (rangeStart && rangeStop) || (defaultRouter && defaultRouter.trim()) || nsArray.length > 0;
         if (!modal.data && !hasAnyProperty) {
-            // Create subnet with a placeholder to ensure it exists
-            // Using subnet-id as it's a common VyOS dhcp subnet key
+            // New subnet with no other properties - set a default description
             stageCommand({ op: 'set', path: [...basePath, 'description', 'Created via Web UI'] });
         }
 
