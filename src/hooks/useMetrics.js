@@ -84,3 +84,38 @@ export const useHistory = (value, maxPoints = 20) => {
 
     return history;
 };
+
+/**
+ * Hook to maintain multiple timeseries histories.
+ * @param {Object} dataMap - { key1: value1, key2: value2 } where value expected to be object.
+ * @param {number} maxPoints
+ */
+export const useMultiHistory = (dataMap, maxPoints = 20) => {
+    const [histories, setHistories] = useState({});
+
+    useEffect(() => {
+        if (!dataMap || Object.keys(dataMap).length === 0) return;
+
+        const now = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        setHistories(prev => {
+            const next = { ...prev };
+            Object.keys(dataMap).forEach(key => {
+                const val = dataMap[key];
+                if (!next[key]) next[key] = [];
+
+                const point = { time: now, ...val };
+
+                const newArr = [...next[key], point];
+                if (newArr.length > maxPoints) {
+                    next[key] = newArr.slice(newArr.length - maxPoints);
+                } else {
+                    next[key] = newArr;
+                }
+            });
+            return next;
+        });
+    }, [dataMap, maxPoints]);
+
+    return histories;
+};
