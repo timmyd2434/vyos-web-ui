@@ -29,12 +29,51 @@ export default function Dashboard() {
     const memUsage = "N/A";
     const diskUsage = "N/A";
 
-    // Attempt to get interface structure - Using 'show' (Operational) to get text output with Real IPs
-    const { data: interfacesText, isLoading: ifLoading } = useVyosOperational(['interfaces', 'operational'], ['interfaces'], 'show');
+    // 1. Config Data (Source of Truth for existence)
+    const { data: configData, isLoading: configLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
 
-    // Parse the text output
-    const interfaces = parseShowInterfaces(interfacesText);
+    // 2. Operational Data (Source of Truth for Real IP / Link State)
+    // We treat this as "enhancement" data. If it fails or parses poorly, we fall back to config.
+    const { data: opData } = useVyosOperational(['interfaces', 'operational'], ['interfaces'], 'show');
+
+    // Helper to flatten Config JSON
+    const flattenConfig = (data) => {
+        if (!data || typeof data !== 'object') return [];
+        const flat = [];
+        Object.keys(data).forEach(type => {
+            if (data[type] && typeof data[type] === 'object') {
+                Object.keys(data[type]).forEach(name => {
+                    flat.push({
+                        type,
+                        name,
+                        ...data[type][name]
+                    });
+                });
+            }
+        });
+        return flat;
+    };
+
+    // Parse Op Data
+    const opInterfaces = parseShowInterfaces(opData);
+
+    // Merge: Config + Op
+    const interfaces = flattenConfig(configData).map(conf => {
+        // Find matching operational data
+        const op = opInterfaces.find(o => o.name === conf.name);
+
+        return {
+            ...conf,
+            // Use Op address if available and valid, otherwise Config address
+            displayAddress: (op && op.address && op.address.length > 0) ? op.address : conf.address,
+            // Use Op state (u/u) if available, otherwise config 'disable' check
+            displayState: op ? op.statusLine : (!conf.disable ? 'UP' : 'DISABLED'),
+            isOpUp: op ? (op.state === 'up') : (!conf.disable),
+        };
+    });
+
     const ifCount = interfaces.length;
+    const isLoading = configLoading;
 
     return (
         <div className="space-y-6">
@@ -79,17 +118,17 @@ export default function Dashboard() {
                     value={ifCount.toString()}
                     icon={Network}
                     color="orange"
-                    subtext="Total Active"
+                    subtext="Total Configured"
                 />
             </div>
 
             {/* Interface List Preview */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
-                    <h3 className="font-medium text-white">Interface Status (Operational)</h3>
+                    <h3 className="font-medium text-white">Interface Status</h3>
                 </div>
                 <div className="overflow-x-auto">
-                    {ifLoading ? (
+                    {isLoading ? (
                         <div className="p-6 animate-pulse flex space-x-4">
                             <div className="flex-1 space-y-4 py-1">
                                 <div className="h-4 bg-slate-800 rounded w-3/4"></div>
@@ -102,16 +141,14 @@ export default function Dashboard() {
                                 <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase font-semibold">
                                     <th className="px-6 py-4">Interface</th>
                                     <th className="px-6 py-4">Address</th>
-                                    <th className="px-6 py-4">Status (A/L)</th>
+                                    <th className="px-6 py-4">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800">
                                 {interfaces.length === 0 && (
                                     <tr>
                                         <td colSpan="3" className="px-6 py-6 text-center text-slate-500">
-                                            No active interfaces found or parsing failed.
-                                            <br />
-                                            <span className='text-xs font-mono opacity-50'>{JSON.stringify(interfacesText)}</span>
+                                            No interfaces found.
                                         </td>
                                     </tr>
                                 )}
@@ -119,18 +156,21 @@ export default function Dashboard() {
                                     <tr key={iface.name} className="hover:bg-slate-800/30 transition-colors">
                                         <td className="px-6 py-3 font-medium text-white">
                                             {iface.name}
+                                            <span className="ml-2 text-xs font-normal text-slate-500 uppercase tracking-wider">{iface.type}</span>
                                         </td>
                                         <td className="px-6 py-3 text-slate-400 font-mono text-sm">
-                                            {Array.isArray(iface.address) ? iface.address.join(', ') : iface.address}
+                                            {Array.isArray(iface.displayAddress)
+                                                ? iface.displayAddress.join(', ')
+                                                : (iface.displayAddress || "-")}
                                         </td>
                                         <td className="px-6 py-3">
                                             <span className={clsx(
                                                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                                                iface.state === 'up'
+                                                iface.isOpUp
                                                     ? "bg-emerald-500/10 text-emerald-400"
                                                     : "bg-red-500/10 text-red-400"
                                             )}>
-                                                {iface.statusLine.toUpperCase()}
+                                                {String(iface.displayState).toUpperCase()}
                                             </span>
                                         </td>
                                     </tr>
