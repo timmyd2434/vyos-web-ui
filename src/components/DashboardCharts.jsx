@@ -1,4 +1,5 @@
 import React from 'react';
+// Recharts import
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 
 const CustomTooltip = ({ active, payload, label, unit = '' }) => {
