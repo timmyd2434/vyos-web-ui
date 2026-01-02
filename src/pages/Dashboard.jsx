@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
 import { useVyosOperational } from '../hooks/useVyosData';
-import { parseShowInterfaces } from '../utils/parsers';
+import { parseShowInterfaces, parseVersion, parseCpu, parseMemory, parseStorage } from '../utils/parsers';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
@@ -20,20 +20,27 @@ const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
 
 export default function Dashboard() {
     // Queries
-    // 1.5 API handling: 'show system image' or 'show version'
-    const { data: versionData } = useVyosOperational(['system', 'version'], ['version']);
+    // Version Info
+    const { data: versionRaw } = useVyosOperational(['system', 'image'], ['version'], 'show');
+    const versionDisplay = parseVersion(versionRaw);
 
-    // For 1.5, getting structured generic system stats (CPU/RAM) via API is tricky without specific "show" commands that return JSON.
-    // We will leave placeholders but mark them as N/A until we implement specific parsers.
-    const cpuUsage = "N/A";
-    const memUsage = "N/A";
-    const diskUsage = "N/A";
+    // System Stats (Text Parsing)
+    const { data: cpuRaw } = useVyosOperational(['system', 'cpu'], ['system', 'cpu'], 'show');
+    const { data: memRaw } = useVyosOperational(['system', 'memory'], ['system', 'memory'], 'show');
+    // Try 'system storage usage' -> likely mapped to ['system', 'storage'] if that works, or we iterate.
+    // Let's guess ['system', 'storage'] maps to 'show system storage' which is valid in 1.5? OR 'disk'.
+    // If 'show system storage' is invalid, we might need a better guess. 'show system storage usage' 
+    // likely map is ['system', 'storage', 'usage']
+    const { data: storageRaw } = useVyosOperational(['system', 'storage', 'usage'], ['system', 'storage'], 'show');
+
+    const cpuUsage = parseCpu(cpuRaw);
+    const memUsage = parseMemory(memRaw);
+    const diskUsage = parseStorage(storageRaw);
 
     // 1. Config Data (Source of Truth for existence)
     const { data: configData, isLoading: configLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
 
     // 2. Operational Data (Source of Truth for Real IP / Link State)
-    // We treat this as "enhancement" data. If it fails or parses poorly, we fall back to config.
     const { data: opData } = useVyosOperational(['interfaces', 'operational'], ['interfaces'], 'show');
 
     // Helper to flatten Config JSON
@@ -55,18 +62,14 @@ export default function Dashboard() {
     };
 
     // Parse Op Data
+    // ... rest of code
     const opInterfaces = parseShowInterfaces(opData);
 
-    // Merge: Config + Op
     const interfaces = flattenConfig(configData).map(conf => {
-        // Find matching operational data
         const op = opInterfaces.find(o => o.name === conf.name);
-
         return {
             ...conf,
-            // Use Op address if available and valid, otherwise Config address
             displayAddress: (op && op.address && op.address.length > 0) ? op.address : conf.address,
-            // Use Op state (u/u) if available, otherwise config 'disable' check
             displayState: op ? op.statusLine : (!conf.disable ? 'UP' : 'DISABLED'),
             isOpUp: op ? (op.state === 'up') : (!conf.disable),
         };
@@ -84,8 +87,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                     <span className="text-xs font-mono text-slate-500 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
-                        {/* Try to extract version string if raw text returned */}
-                        {JSON.stringify(versionData) || "VyOS 1.5"}
+                        {versionDisplay}
                     </span>
                 </div>
             </div>
@@ -97,21 +99,21 @@ export default function Dashboard() {
                     value={cpuUsage}
                     icon={Cpu}
                     color="blue"
-                    subtext="Waiting for implementation"
+                    subtext={cpuUsage !== "N/A" ? "Load Load" : "Monitoring"}
                 />
                 <StatCard
                     title="Memory"
                     value={memUsage}
                     icon={Activity}
                     color="emerald"
-                    subtext="Waiting for implementation"
+                    subtext={memUsage !== "N/A" ? "Used RAM" : "Monitoring"}
                 />
                 <StatCard
                     title="Storage"
                     value={diskUsage}
                     icon={HardDrive}
                     color="purple"
-                    subtext="Waiting for implementation"
+                    subtext={diskUsage !== "N/A" ? "Disk /" : "Monitoring"}
                 />
                 <StatCard
                     title="Interfaces"
