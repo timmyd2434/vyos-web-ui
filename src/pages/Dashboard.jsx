@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import clsx from 'clsx';
 import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
 import { useVyosOperational } from '../hooks/useVyosData';
