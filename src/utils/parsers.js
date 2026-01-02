@@ -4,38 +4,49 @@ export const parseShowInterfaces = (text) => {
     const lines = text.split('\n');
     const interfaces = [];
 
-    // Skip header lines (usually start with "Interface" or "-------")
-    // Regex matches typical VyOS "show interfaces" output:
-    // Interface        IP Address                        S/L  Description
-    // ---------        ----------                        ---  -----------
-    // eth0             192.168.1.15/24                   u/u  WAN
-
-    // Pattern: 
-    // Group 1: Interface Name (non-whitespace)
-    // Group 2: IP Address (non-whitespace, or "-" if usually none, but normally IP or -)
-    // Group 3: Status/Link (e.g. u/u, u/D, A/D) (non-whitespace)
-    // Group 4: Description (optional, trailing text)
-
-    const lineRegex = /^([a-zA-Z0-9\.\-\@]+)\s+([0-9\.\:\/,\-]+)\s+([a-zA-Z\/]+)(?:\s+(.*))?$/;
+    // Header often contains: Codes: S - State, L - Link, u - Up, D - Down...
+    // Table Header: Interface  IP Address  MAC  VRF  MTU  S/L  Description
 
     lines.forEach(line => {
         const trimmed = line.trim();
         if (!trimmed) return;
-        if (trimmed.startsWith('Interface') || trimmed.startsWith('-----')) return;
-        if (trimmed.includes('IP Address')) return;
 
-        const match = trimmed.match(lineRegex);
-        if (match) {
-            interfaces.push({
-                name: match[1],
-                address: match[2] === '-' ? [] : match[2].split(','), // sometimes multiple IPs comma separated? usually separate lines or shortened. text output usually 1 ip or comma.
-                statusLine: match[3],
-                // u/u = Admin Up / Link Up. u/D = Admin Up / Link Down
-                state: match[3].toLowerCase().startsWith('u') ? 'up' : 'down',
-                link: match[3].toLowerCase().endsWith('u') ? 'up' : 'down',
-                description: match[4] || ''
-            });
-        }
+        // Skip headers / legends
+        if (trimmed.startsWith('Codes:') || trimmed.startsWith('Interface') || trimmed.startsWith('-----') || trimmed.startsWith('default')) return;
+
+        // Strategy: Identifying the "S/L" column is key. It usually looks like u/u, u/D, A/D.
+        // Regex to find the S/L column: \s([uAD]\/[uAD])\s
+        // This splits the line into "Left Part" (Name + IP + Stuff) and "Right Part" (Description)
+
+        const slMatch = trimmed.match(/\s([uAD]\/[uAD])(\s|$)/);
+        if (!slMatch) return;
+
+        const statusLine = slMatch[1];
+        const statusIndex = slMatch.index;
+
+        // Everything before S/L
+        const preStatus = trimmed.substring(0, statusIndex).trim();
+        // Everything after S/L
+        const description = trimmed.substring(statusIndex + slMatch[0].length).trim();
+
+        // Parse preStatus parts. It should be: Name [SPACE] IP [SPACE] [Optional MAC/VRF/MTU]
+        const parts = preStatus.split(/\s+/);
+        if (parts.length < 2) return;
+
+        const name = parts[0];
+        const addressRaw = parts[1];
+
+        // Basic validation
+        if (name === 'Interface') return;
+
+        interfaces.push({
+            name: name,
+            address: addressRaw === '-' ? [] : addressRaw.split(','),
+            statusLine: statusLine,
+            state: statusLine.toLowerCase().startsWith('u') ? 'up' : 'down',
+            link: statusLine.toLowerCase().endsWith('u') ? 'up' : 'down',
+            description: description
+        });
     });
 
     return interfaces;
