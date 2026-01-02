@@ -93,7 +93,7 @@ export const ConfigProvider = ({ children }) => {
     return (
         <ConfigContext.Provider value={{
             pendingChanges,
-            addChange,
+            stageCommand: addChange,
             removeChange,
             discardAll,
             commit,
