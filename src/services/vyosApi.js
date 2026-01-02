@@ -67,12 +67,22 @@ export const retrieve = async (url, key, opData) => {
  * @param {object} opData - Operation data
  */
 export const configure = async (url, key, opData) => {
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(opData));
-    formData.append('key', key);
+    try {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(opData));
+        formData.append('key', key);
 
-    const response = await axios.post(`${url}${ENDPOINTS.CONFIGURE}`, formData);
-    return response.data;
+        const response = await axios.post(`${url}${ENDPOINTS.CONFIGURE}`, formData);
+        return response.data;
+    } catch (error) {
+        console.error("VyOS Configure Error:", error);
+        console.error("Command:", JSON.stringify(opData, null, 2));
+        if (error.response) {
+            console.error("Status:", error.response.status);
+            console.error("VyOS Response:", error.response.data);
+        }
+        throw error;
+    }
 };
 
 // Generic post wrapper if needed

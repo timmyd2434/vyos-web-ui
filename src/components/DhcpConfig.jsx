@@ -48,20 +48,22 @@ export default function DhcpConfig() {
         const { name, description } = formData;
 
         // Creating logic (if data was null) OR Editing logic
-        // For shared-network-name, the name is the key. Can't change name easy.
+        // For shared-network-name, the name is the key. Can't change name easily.
 
-        // Path: service dhcp-server shared-network-name NAME description ...
+        // If creating new network, we need to ensure the node exists first
+        // VyOS requires at least one child property to create a container node
+        // If no description provided, we'll rely on subnet creation later
+        
         if (description) {
+            // Setting description will implicitly create the network node
             stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description', description] });
-        } else {
-            // If empty description, maybe delete it?
+        } else if (modal.data && modal.data.description) {
+            // User cleared the description in edit mode, delete it
             stageCommand({ op: 'delete', path: ['service', 'dhcp-server', 'shared-network-name', name, 'description'] });
-        }
-
-        // Use a dummy set to ensure node creation if new?
-        if (!modal.data) {
-            // Ensure creation
-            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name] });
+        } else if (!modal.data) {
+            // New network with no description - create it with an empty authoritative statement
+            // This is a common VyOS pattern to create DHCP networks
+            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', name, 'authoritative'] });
         }
 
         closeModal();
