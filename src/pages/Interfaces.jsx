@@ -8,7 +8,8 @@ import InterfaceForm from '../components/InterfaceForm';
 export default function Interfaces() {
     const { data, isLoading, refetch, isRefetching } = useVyosOperational(
         ['interfaces', 'list'],
-        ['interfaces']
+        ['interfaces'],
+        'showConfig'
     );
     const [searchTerm, setSearchTerm] = useState('');
 
