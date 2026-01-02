@@ -154,15 +154,23 @@ export const parseStorage = (text) => {
 
 /**
  * Parses 'show system uptime'
- * Example: 22:30:10 up 3 days, 10:20,  1 user,  load average: 0.00, 0.01, 0.05
+ * Supports standard Unix `uptime` or VyOS specific output:
+ * "Load averages: 1 minute: 5.4%"
  */
 export const parseUptime = (text) => {
     if (!text || typeof text !== 'string') return 'N/A';
 
-    // Match "load average: 0.00"
-    const match = text.match(/load average:\s*([\d\.]+)/);
-    if (match) {
-        return match[1];
+    // Check for VyOS structured output first
+    // 1  minute:   5.4%
+    const vyosMatch = text.match(/1\s+minute:\s*([\d\.]+)%/);
+    if (vyosMatch) {
+        return `${vyosMatch[1]}%`;
+    }
+
+    // Fallback to standard Unix "load average: 0.00"
+    const standardMatch = text.match(/load average:\s*([\d\.]+)/);
+    if (standardMatch) {
+        return standardMatch[1];
     }
 
     return 'N/A';
