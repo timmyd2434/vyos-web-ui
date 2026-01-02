@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
 import { useVyosOperational } from '../hooks/useVyosData';
 
@@ -30,7 +31,27 @@ export default function Dashboard() {
     // Attempt to get interface structure - Using showConfig to get JSON tree
     const { data: interfacesData, isLoading: ifLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
 
-    const ifCount = interfacesData ? (Array.isArray(interfacesData) ? interfacesData.length : Object.keys(interfacesData).length) : 0;
+    // Helpher to flatten: similar to Interfaces.jsx but streamlined
+    const flattenInterfaces = (data) => {
+        if (!data || typeof data !== 'object') return [];
+        const flat = [];
+        Object.keys(data).forEach(type => {
+            // Check if data[type] is an object before iterating
+            if (data[type] && typeof data[type] === 'object') {
+                Object.keys(data[type]).forEach(name => {
+                    flat.push({
+                        type,
+                        name,
+                        ...data[type][name]
+                    });
+                });
+            }
+        });
+        return flat;
+    };
+
+    const interfaces = flattenInterfaces(interfacesData);
+    const ifCount = interfaces.length;
 
     return (
         <div className="space-y-6">
@@ -84,24 +105,55 @@ export default function Dashboard() {
                 <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
                     <h3 className="font-medium text-white">Interface Status</h3>
                 </div>
-                <div className="p-6">
+                <div className="overflow-x-auto">
                     {ifLoading ? (
-                        <div className="animate-pulse flex space-x-4">
+                        <div className="p-6 animate-pulse flex space-x-4">
                             <div className="flex-1 space-y-4 py-1">
                                 <div className="h-4 bg-slate-800 rounded w-3/4"></div>
                                 <div className="h-4 bg-slate-800 rounded"></div>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-slate-400 text-sm">
-                            {/* Placeholder for table */}
-                            {!interfacesData && <p>No interface data available or connection failed.</p>}
-                            {interfacesData && (
-                                <pre className="font-mono text-xs bg-black/30 p-4 rounded-lg overflow-auto max-h-60">
-                                    {JSON.stringify(interfacesData, null, 2)}
-                                </pre>
-                            )}
-                        </div>
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase font-semibold">
+                                    <th className="px-6 py-4">Interface</th>
+                                    <th className="px-6 py-4">Address</th>
+                                    <th className="px-6 py-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800">
+                                {interfaces.length === 0 && (
+                                    <tr>
+                                        <td colSpan="3" className="px-6 py-6 text-center text-slate-500">
+                                            No interfaces found.
+                                        </td>
+                                    </tr>
+                                )}
+                                {interfaces.map((iface) => (
+                                    <tr key={iface.name} className="hover:bg-slate-800/30 transition-colors">
+                                        <td className="px-6 py-3 font-medium text-white">
+                                            {iface.name}
+                                            <span className="ml-2 text-xs font-normal text-slate-500 uppercase tracking-wider">{iface.type}</span>
+                                        </td>
+                                        <td className="px-6 py-3 text-slate-400 font-mono text-sm">
+                                            {Array.isArray(iface.address) ? iface.address[0] : (iface.address || "-")}
+                                            {Array.isArray(iface.address) && iface.address.length > 1 && <span className="text-xs ml-1 opacity-50">+{iface.address.length - 1}</span>}
+                                        </td>
+                                        <td className="px-6 py-3">
+                                            <span className={clsx(
+                                                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+                                                (!iface.disable && iface.disable !== '')
+                                                    ? "bg-emerald-500/10 text-emerald-400"
+                                                    : "bg-red-500/10 text-red-400"
+                                            )}>
+                                                {(!iface.disable && iface.disable !== '') ? "UP" : "DISABLED"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
             </div>
