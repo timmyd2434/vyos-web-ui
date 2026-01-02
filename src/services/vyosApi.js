@@ -16,10 +16,7 @@ const ENDPOINTS = {
 const createClient = (baseUrl) => {
     return axios.create({
         baseURL: baseUrl,
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-        // Allow self-signed certs in dev (browser handles this, but good to know)
+        // Do NOT set Content-Type manually for FormData, axios/browser handles it with boundary
     });
 };
 
