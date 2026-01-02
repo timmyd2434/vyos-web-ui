@@ -1,7 +1,21 @@
+import clsx from 'clsx';
+import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
+import { useVyosOperational } from '../hooks/useVyosData';
 import { parseShowInterfaces, parseVersion, parseUptime, parseMemory, parseStorage } from '../utils/parsers';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
-// ... (lines 6-18 unchanged)
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-slate-400">{title}</h3>
+            <div className={`p-2 rounded-lg bg-${color}-500/10`}>
+                <Icon className={`w-5 h-5 text-${color}-500`} />
+            </div>
+        </div>
+        <div className="flex items-baseline">
+            <h2 className="text-3xl font-bold text-white mr-2">{value}</h2>
+            <span className="text-xs text-slate-500">{subtext}</span>
+        </div>
+    </div>
 );
 
 export default function Dashboard() {
