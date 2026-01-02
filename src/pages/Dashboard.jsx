@@ -1,7 +1,9 @@
 import clsx from 'clsx';
 import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
 import { useVyosOperational } from '../hooks/useVyosData';
-import { parseShowInterfaces, parseVersion, parseUptime, parseMemory, parseStorage } from '../utils/parsers';
+import { useHistory, useTrafficRate, useMultiHistory } from '../hooks/useMetrics';
+import { MetricAreaChart, InterfaceLineChart } from '../components/DashboardCharts';
+import { parseShowInterfaces, parseVersion, parseUptime, parseMemory, parseStorage, parseInterfaceCounters } from '../utils/parsers';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
@@ -25,15 +27,32 @@ export default function Dashboard() {
     const versionDisplay = parseVersion(versionRaw);
 
     // System Stats
-    // 'show system cpu' is hardware info. 'monitoring cpu' is blank.
-    // Fallback to 'show system uptime' for Load Average.
     const { data: uptimeRaw } = useVyosOperational(['system', 'uptime'], ['system', 'uptime'], 'show');
     const { data: memRaw } = useVyosOperational(['system', 'memory'], ['system', 'memory'], 'show');
     const { data: storageRaw } = useVyosOperational(['system', 'storage', 'usage'], ['system', 'storage'], 'show');
 
+    // Interface Stats - NEW
+    const { data: countersRaw } = useVyosOperational(['interfaces', 'counters'], ['interfaces', 'counters'], 'show');
+
+    // Parsed Data
     const loadAvg = parseUptime(uptimeRaw);
     const memUsage = parseMemory(memRaw);
     const diskUsage = parseStorage(storageRaw);
+    const counters = parseInterfaceCounters(countersRaw);
+
+    // Historical Data Hooks
+    const loadVal = parseFloat(loadAvg);
+    const memVal = parseFloat(memUsage);
+
+    // Chart History (Max 20 points ~ 100 seconds at 5s refresh)
+    const loadHistory = useHistory(!isNaN(loadVal) ? loadVal : null, 20);
+    const memHistory = useHistory(!isNaN(memVal) ? memVal : null, 20);
+
+    // Traffic Rates & History
+    // Filter out 'lo' before passing to hooks if possible, or just filter render
+    // Better to calculate rates for everything, filter render.
+    const trafficRates = useTrafficRate(counters);
+    const interfaceHistories = useMultiHistory(trafficRates, 20);
 
     // 1. Config Data (Source of Truth for existence)
     const { data: configData, isLoading: configLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
@@ -60,9 +79,9 @@ export default function Dashboard() {
     };
 
     // Parse Op Data
-    // ... rest of code
     const opInterfaces = parseShowInterfaces(opData);
 
+    // Merge: Config + Op
     const interfaces = flattenConfig(configData).map(conf => {
         const op = opInterfaces.find(o => o.name === conf.name);
         return {
@@ -75,6 +94,9 @@ export default function Dashboard() {
 
     const ifCount = interfaces.length;
     const isLoading = configLoading;
+
+    // Filter interfaces for Charts (exclude 'lo')
+    const charbableInterfaces = interfaces.filter(i => i.name !== 'lo');
 
     return (
         <div className="space-y-6">
@@ -121,6 +143,28 @@ export default function Dashboard() {
                     subtext="Total Configured"
                 />
             </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <MetricAreaChart data={loadHistory} title="Load Average History" color="#3b82f6" unit="" />
+                <MetricAreaChart data={memHistory} title="Memory Usage History" color="#10b981" unit="%" />
+            </div>
+
+            {/* Interface Charts Grid */}
+            {charbableInterfaces.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-white">Interface Traffic</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {charbableInterfaces.map(iface => (
+                            <InterfaceLineChart
+                                key={iface.name}
+                                data={interfaceHistories[iface.name] || []}
+                                title={iface.name}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Interface List Preview */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -183,20 +227,12 @@ export default function Dashboard() {
             {/* Debugging Raw Op Data */}
             <div className="bg-black/50 p-4 rounded text-xs font-mono text-green-400 overflow-auto max-h-40 space-y-4">
                 <div>
+                    <strong className="text-white block">Debug - Counters Raw:</strong>
+                    <pre>{typeof countersRaw === 'string' ? countersRaw : JSON.stringify(countersRaw)}</pre>
+                </div>
+                <div>
                     <strong className="text-white block">Debug - Uptime/Load Raw:</strong>
                     <pre>{typeof uptimeRaw === 'string' ? uptimeRaw : JSON.stringify(uptimeRaw)}</pre>
-                </div>
-                <div>
-                    <strong className="text-white block">Debug - Memory Raw:</strong>
-                    <pre>{typeof memRaw === 'string' ? memRaw : JSON.stringify(memRaw)}</pre>
-                </div>
-                <div>
-                    <strong className="text-white block">Debug - Storage Raw:</strong>
-                    <pre>{typeof storageRaw === 'string' ? storageRaw : JSON.stringify(storageRaw)}</pre>
-                </div>
-                <div>
-                    <strong className="text-white block">Debug - Interfaces Op Data:</strong>
-                    <pre>{typeof opData === 'string' ? opData : JSON.stringify(opData)}</pre>
                 </div>
             </div>
         </div>
