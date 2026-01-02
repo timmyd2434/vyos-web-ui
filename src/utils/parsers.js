@@ -175,3 +175,46 @@ export const parseUptime = (text) => {
 
     return 'N/A';
 };
+
+/**
+ * Parses 'show interfaces counters'
+ * Expected Table:
+ * Interface  Rx Packets   Rx Bytes     Tx Packets   Tx Bytes
+ * eth0       123123       123123123    123          12312
+ */
+export const parseInterfaceCounters = (text) => {
+    if (!text || typeof text !== 'string') return {};
+
+    const lines = text.split('\n');
+    const counters = {};
+
+    lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        if (trimmed.startsWith('Interface') || trimmed.startsWith('-----')) return;
+
+        // ETH0  123  123  123  123
+        const parts = trimmed.split(/\s+/);
+        if (parts.length >= 5) {
+            const name = parts[0];
+            // Assuming: Name RxPkts RxBytes TxPkts TxBytes
+            // We want RxBytes (idx 2) and TxBytes (idx 4) typically?
+            // Wait, standard Linux 'netstat -i' or similar might differ.
+            // Let's assume standard VyOS 1.x output order:
+            // Int | RxPkts | RxBytes | TxPkts | TxBytes
+
+            // To be safe against column shifts, we might need mapped columns if header existed.
+            // For now, let's blindly take expected columns.
+            // If the numbers look like bytes (large), we use them.
+
+            const rxBytes = parseInt(parts[2], 10);
+            const txBytes = parseInt(parts[4], 10);
+
+            if (!isNaN(rxBytes) && !isNaN(txBytes)) {
+                counters[name] = { rx: rxBytes, tx: txBytes };
+            }
+        }
+    });
+
+    return counters;
+};
