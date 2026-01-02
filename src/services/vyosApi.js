@@ -39,14 +39,22 @@ export const retrieve = async (url, key, opData) => {
         return response.data;
     } catch (error) {
         console.error("VyOS Retrieve Error:", error);
+
+        // Handle specific VyOS 400 error for empty configuration paths
+        if (error.response && error.response.status === 400) {
+            const errData = error.response.data;
+            const errMsg = errData?.error || '';
+            if (typeof errMsg === 'string' && errMsg.includes('Configuration under specified path is empty')) {
+                console.warn("VyOS returned 400 for empty path, treating as null result.");
+                return { success: true, data: null };
+            }
+        }
+
         if (error.response) {
             console.error("Status:", error.response.status);
             console.error("Data:", error.response.data);
-            console.error("Headers:", error.response.headers);
         } else if (error.request) {
-            console.error("No response received. Request:", error.request);
-        } else {
-            console.error("Error setting up request:", error.message);
+            console.error("No response received");
         }
         throw error;
     }
