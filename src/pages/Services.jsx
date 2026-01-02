@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Activity, Server, Globe, Terminal } from 'lucide-react';
 import clsx from 'clsx';
-// Will import sub-components later
+import DhcpConfig from '../components/DhcpConfig';
 
 export default function Services() {
     const [activeTab, setActiveTab] = useState('dhcp');
@@ -40,13 +40,8 @@ export default function Services() {
 
             {/* Content Area */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 min-h-[400px]">
-                {activeTab === 'dhcp' && (
-                    <div className="text-center text-slate-500 py-12">
-                        <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <h3 className="text-lg font-medium text-slate-300">DHCP Server</h3>
-                        <p>Detailed configuration coming soon...</p>
-                    </div>
-                )}
+                {activeTab === 'dhcp' && <DhcpConfig />}
+
                 {activeTab === 'dns' && (
                     <div className="text-center text-slate-500 py-12">
                         <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -54,6 +49,7 @@ export default function Services() {
                         <p>Detailed configuration coming soon...</p>
                     </div>
                 )}
+
                 {activeTab === 'ssh' && (
                     <div className="text-center text-slate-500 py-12">
                         <Terminal className="w-12 h-12 mx-auto mb-4 opacity-50" />
