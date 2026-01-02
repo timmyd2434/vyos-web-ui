@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Interfaces from './pages/Interfaces';
 import Firewall from './pages/Firewall';
+import Services from './pages/Services';
 import System from './pages/System';
 import MainLayout from './layouts/MainLayout';
 
@@ -46,6 +47,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/interfaces" element={<Interfaces />} />
           <Route path="/firewall" element={<Firewall />} />
+          <Route path="/services" element={<Services />} />
           <Route path="/system" element={<System />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
