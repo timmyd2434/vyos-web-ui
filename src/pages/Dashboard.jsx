@@ -27,8 +27,8 @@ export default function Dashboard() {
     const memUsage = "N/A";
     const diskUsage = "N/A";
 
-    // Attempt to get interface structure
-    const { data: interfacesData, isLoading: ifLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces']);
+    // Attempt to get interface structure - Using showConfig to get JSON tree
+    const { data: interfacesData, isLoading: ifLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
 
     const ifCount = interfacesData ? (Array.isArray(interfacesData) ? interfacesData.length : Object.keys(interfacesData).length) : 0;
 
