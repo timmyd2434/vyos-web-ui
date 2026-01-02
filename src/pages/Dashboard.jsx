@@ -28,12 +28,13 @@ export default function Dashboard() {
     const versionDisplay = useMemo(() => parseVersion(versionRaw), [versionRaw]);
 
     // System Stats
-    const { data: uptimeRaw } = useVyosOperational(['system', 'uptime'], ['system', 'uptime'], 'show');
-    const { data: memRaw } = useVyosOperational(['system', 'memory'], ['system', 'memory'], 'show');
+    // Destructure dataUpdatedAt to force history updates even if values are static
+    const { data: uptimeRaw, dataUpdatedAt: uptimeUpdated } = useVyosOperational(['system', 'uptime'], ['system', 'uptime'], 'show');
+    const { data: memRaw, dataUpdatedAt: memUpdated } = useVyosOperational(['system', 'memory'], ['system', 'memory'], 'show');
     const { data: storageRaw } = useVyosOperational(['system', 'storage', 'usage'], ['system', 'storage'], 'show');
 
-    // Interface Stats - NEW
-    const { data: countersRaw } = useVyosOperational(['interfaces', 'counters'], ['interfaces', 'counters'], 'show');
+    // Interface Stats
+    const { data: countersRaw, dataUpdatedAt: countersUpdated } = useVyosOperational(['interfaces', 'counters'], ['interfaces', 'counters'], 'show');
 
     // Parsed Data - Memoized to prevent infinite loops in hooks
     const loadAvg = useMemo(() => parseUptime(uptimeRaw), [uptimeRaw]);
@@ -46,14 +47,12 @@ export default function Dashboard() {
     const memVal = parseFloat(memUsage);
 
     // Chart History (Max 20 points ~ 100 seconds at 5s refresh)
-    const loadHistory = useHistory(!isNaN(loadVal) ? loadVal : null, 20);
-    const memHistory = useHistory(!isNaN(memVal) ? memVal : null, 20);
+    const loadHistory = useHistory(!isNaN(loadVal) ? loadVal : null, 20, uptimeUpdated);
+    const memHistory = useHistory(!isNaN(memVal) ? memVal : null, 20, memUpdated);
 
     // Traffic Rates & History
-    // Filter out 'lo' before passing to hooks if possible, or just filter render
-    // Better to calculate rates for everything, filter render.
     const trafficRates = useTrafficRate(counters);
-    const interfaceHistories = useMultiHistory(trafficRates, 20);
+    const interfaceHistories = useMultiHistory(trafficRates, 20, countersUpdated);
 
     // 1. Config Data (Source of Truth for existence)
     const { data: configData, isLoading: configLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
