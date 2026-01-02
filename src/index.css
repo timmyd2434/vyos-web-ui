@@ -1,9 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 min-h-screen font-sans antialiased;
+    background-color: var(--color-slate-950);
+    color: var(--color-slate-100);
+    min-height: 100vh;
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   }
+}
+
+@theme {
+  --color-vyos-dark: #1e293b;
+  --color-vyos-light: #334155;
+  --color-vyos-primary: #3b82f6;
 }
