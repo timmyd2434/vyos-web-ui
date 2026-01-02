@@ -24,7 +24,7 @@ export default function Dashboard() {
     // Queries
     // Version Info
     const { data: versionRaw } = useVyosOperational(['system', 'image'], ['version'], 'show');
-    const versionDisplay = parseVersion(versionRaw);
+    const versionDisplay = useMemo(() => parseVersion(versionRaw), [versionRaw]);
 
     // System Stats
     const { data: uptimeRaw } = useVyosOperational(['system', 'uptime'], ['system', 'uptime'], 'show');
@@ -34,11 +34,11 @@ export default function Dashboard() {
     // Interface Stats - NEW
     const { data: countersRaw } = useVyosOperational(['interfaces', 'counters'], ['interfaces', 'counters'], 'show');
 
-    // Parsed Data
-    const loadAvg = parseUptime(uptimeRaw);
-    const memUsage = parseMemory(memRaw);
-    const diskUsage = parseStorage(storageRaw);
-    const counters = parseInterfaceCounters(countersRaw);
+    // Parsed Data - Memoized to prevent infinite loops in hooks
+    const loadAvg = useMemo(() => parseUptime(uptimeRaw), [uptimeRaw]);
+    const memUsage = useMemo(() => parseMemory(memRaw), [memRaw]);
+    const diskUsage = useMemo(() => parseStorage(storageRaw), [storageRaw]);
+    const counters = useMemo(() => parseInterfaceCounters(countersRaw), [countersRaw]);
 
     // Historical Data Hooks
     const loadVal = parseFloat(loadAvg);
