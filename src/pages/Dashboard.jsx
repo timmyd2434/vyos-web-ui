@@ -25,7 +25,9 @@ export default function Dashboard() {
     const versionDisplay = parseVersion(versionRaw);
 
     // System Stats (Text Parsing)
-    const { data: cpuRaw } = useVyosOperational(['system', 'cpu'], ['system', 'cpu'], 'show');
+    // 'show system cpu' returns hardware info. 'show monitoring cpu' might return utilization?
+    // If that fails, we might just have to accept N/A or try 'show system uptime' for load avg.
+    const { data: cpuRaw } = useVyosOperational(['monitoring', 'cpu'], ['monitoring', 'cpu'], 'show');
     const { data: memRaw } = useVyosOperational(['system', 'memory'], ['system', 'memory'], 'show');
     // Try 'system storage usage' -> likely mapped to ['system', 'storage'] if that works, or we iterate.
     // Let's guess ['system', 'storage'] maps to 'show system storage' which is valid in 1.5? OR 'disk'.
