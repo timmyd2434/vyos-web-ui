@@ -68,21 +68,42 @@ export const parseVersion = (text) => {
 };
 
 /**
+ * Helper to parse value with unit to MB
+ */
+const parseBytes = (str) => {
+    if (!str) return 0;
+    const match = str.match(/([\d\.]+)\s*([A-Za-z]+)/);
+    if (!match) return parseFloat(str) || 0;
+
+    let val = parseFloat(match[1]);
+    const unit = match[2].toUpperCase();
+
+    if (unit.startsWith('G')) val *= 1024;
+    else if (unit.startsWith('K')) val /= 1024;
+    // Default MB
+    return val;
+};
+
+/**
  * Parses 'show system memory' output
- * Expected: Total: 8060, Used: 500, Free: 7560
+ * Format:
+ * Total: 15.63 GB
+ * Used: 737.12 MB
  */
 export const parseMemory = (text) => {
     if (!text || typeof text !== 'string') return 'N/A';
 
-    // Regex for "Total: 123, Used: 456"
-    const totalMatch = text.match(/Total:\s*(\d+)/i);
-    const usedMatch = text.match(/Used:\s*(\d+)/i);
+    // Look for "Total: <val>" and "Used: <val>"
+    // The previous regex was simpler, now we need to match the unit too.
+    const totalMatch = text.match(/Total:\s*([\d\.]+\s*[A-Za-z]+)/i);
+    const usedMatch = text.match(/Used:\s*([\d\.]+\s*[A-Za-z]+)/i);
 
     if (totalMatch && usedMatch) {
-        const total = parseInt(totalMatch[1], 10);
-        const used = parseInt(usedMatch[1], 10);
-        if (total > 0) {
-            const pct = Math.round((used / total) * 100);
+        const totalMb = parseBytes(totalMatch[1]);
+        const usedMb = parseBytes(usedMatch[1]);
+
+        if (totalMb > 0) {
+            const pct = Math.round((usedMb / totalMb) * 100);
             return `${pct}%`;
         }
     }
@@ -90,45 +111,40 @@ export const parseMemory = (text) => {
 };
 
 /**
- * Parses 'show system cpu' output
- * Tries to find loose percentages or load avg
+ * Parses 'show system cpu' or 'show monitoring cpu' output
  */
 export const parseCpu = (text) => {
     if (!text || typeof text !== 'string') return 'N/A';
 
-    // Case 1: "CPU utilization: 5%"
-    const utilMatch = text.match(/CPU utilization:\s*([\d\.]+)%/i);
-    if (utilMatch) return `${Math.round(parseFloat(utilMatch[1]))}%`;
-
-    // Case 2: "User: 1.2%, System: 0.5%, Idle: 98%" (Sum non-idle?)
-    // Or just look for "Idle: X%" and subtract from 100
+    // Check for "Idle: X%"
     const idleMatch = text.match(/Idle:\s*([\d\.]+)%/i);
     if (idleMatch) {
         const idle = parseFloat(idleMatch[1]);
         return `${Math.round(100 - idle)}%`;
     }
 
+    // Check for "val%" (generic)
+    const utilMatch = text.match(/Utilization:\s*([\d\.]+)%/i);
+    if (utilMatch) return `${Math.round(parseFloat(utilMatch[1]))}%`;
+
     return 'N/A';
 };
 
 /**
- * Parses 'show system storage usage' output (df -h style)
- * Finds usage for root partition '/' or /config
+ * Parses 'show system storage' vertical output
+ * Used: 693M (3%)
  */
 export const parseStorage = (text) => {
     if (!text || typeof text !== 'string') return 'N/A';
 
+    // Look for "Used: <val> (<pct>%)"
+    const usedMatch = text.match(/Used:.*\((\d+)%\)/);
+    if (usedMatch) return `${usedMatch[1]}%`;
+
+    // Fallback to df -h table style
     const lines = text.split('\n');
-    // Header: Filesystem Size Used Avail Use% Mounted on
-
-    // Find line mounted on '/' or '/config' or just grab largest usage?
-    // Let's grab '/' (root)
     let rootLine = lines.find(l => l.trim().endsWith(' /'));
-    if (!rootLine) rootLine = lines.find(l => l.trim().endsWith('/config')); // Fallback
-
     if (rootLine) {
-        // defined by whitespace, Use% is usually 5th column?
-        // Let's just Regex for the percentage
         const pctMatch = rootLine.match(/(\d+)%/);
         if (pctMatch) return pctMatch[0];
     }
