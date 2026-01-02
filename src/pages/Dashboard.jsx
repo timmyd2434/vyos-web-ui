@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
 import { useVyosOperational } from '../hooks/useVyosData';
+import { parseShowInterfaces } from '../utils/parsers';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
@@ -28,29 +29,11 @@ export default function Dashboard() {
     const memUsage = "N/A";
     const diskUsage = "N/A";
 
-    // Attempt to get interface structure - Using showConfig to get JSON tree
-    const { data: interfacesData, isLoading: ifLoading } = useVyosOperational(['interfaces', 'summary'], ['interfaces'], 'showConfig');
+    // Attempt to get interface structure - Using 'show' (Operational) to get text output with Real IPs
+    const { data: interfacesText, isLoading: ifLoading } = useVyosOperational(['interfaces', 'operational'], ['interfaces'], 'show');
 
-    // Helpher to flatten: similar to Interfaces.jsx but streamlined
-    const flattenInterfaces = (data) => {
-        if (!data || typeof data !== 'object') return [];
-        const flat = [];
-        Object.keys(data).forEach(type => {
-            // Check if data[type] is an object before iterating
-            if (data[type] && typeof data[type] === 'object') {
-                Object.keys(data[type]).forEach(name => {
-                    flat.push({
-                        type,
-                        name,
-                        ...data[type][name]
-                    });
-                });
-            }
-        });
-        return flat;
-    };
-
-    const interfaces = flattenInterfaces(interfacesData);
+    // Parse the text output
+    const interfaces = parseShowInterfaces(interfacesText);
     const ifCount = interfaces.length;
 
     return (
@@ -96,14 +79,14 @@ export default function Dashboard() {
                     value={ifCount.toString()}
                     icon={Network}
                     color="orange"
-                    subtext="Total Configured"
+                    subtext="Total Active"
                 />
             </div>
 
             {/* Interface List Preview */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
-                    <h3 className="font-medium text-white">Interface Status</h3>
+                    <h3 className="font-medium text-white">Interface Status (Operational)</h3>
                 </div>
                 <div className="overflow-x-auto">
                     {ifLoading ? (
@@ -119,14 +102,16 @@ export default function Dashboard() {
                                 <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase font-semibold">
                                     <th className="px-6 py-4">Interface</th>
                                     <th className="px-6 py-4">Address</th>
-                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Status (A/L)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800">
                                 {interfaces.length === 0 && (
                                     <tr>
                                         <td colSpan="3" className="px-6 py-6 text-center text-slate-500">
-                                            No interfaces found.
+                                            No active interfaces found or parsing failed.
+                                            <br />
+                                            <span className='text-xs font-mono opacity-50'>{JSON.stringify(interfacesText)}</span>
                                         </td>
                                     </tr>
                                 )}
@@ -134,20 +119,18 @@ export default function Dashboard() {
                                     <tr key={iface.name} className="hover:bg-slate-800/30 transition-colors">
                                         <td className="px-6 py-3 font-medium text-white">
                                             {iface.name}
-                                            <span className="ml-2 text-xs font-normal text-slate-500 uppercase tracking-wider">{iface.type}</span>
                                         </td>
                                         <td className="px-6 py-3 text-slate-400 font-mono text-sm">
-                                            {Array.isArray(iface.address) ? iface.address[0] : (iface.address || "-")}
-                                            {Array.isArray(iface.address) && iface.address.length > 1 && <span className="text-xs ml-1 opacity-50">+{iface.address.length - 1}</span>}
+                                            {Array.isArray(iface.address) ? iface.address.join(', ') : iface.address}
                                         </td>
                                         <td className="px-6 py-3">
                                             <span className={clsx(
                                                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                                                (!iface.disable && iface.disable !== '')
+                                                iface.state === 'up'
                                                     ? "bg-emerald-500/10 text-emerald-400"
                                                     : "bg-red-500/10 text-red-400"
                                             )}>
-                                                {(!iface.disable && iface.disable !== '') ? "UP" : "DISABLED"}
+                                                {iface.statusLine.toUpperCase()}
                                             </span>
                                         </td>
                                     </tr>
