@@ -32,7 +32,10 @@ export const retrieve = async (url, key, opData) => {
         formData.append('data', JSON.stringify(opData));
         formData.append('key', key);
 
-        const response = await axios.post(`${url}${ENDPOINTS.RETRIEVE}`, formData);
+        // VyOS 1.5+: 'show' operational commands must go to /show, 'showConfig' goes to /retrieve
+        const endpoint = (opData && opData.op === 'show') ? ENDPOINTS.SHOW : ENDPOINTS.RETRIEVE;
+
+        const response = await axios.post(`${url}${endpoint}`, formData);
         return response.data;
     } catch (error) {
         console.error("VyOS Retrieve Error:", error);
