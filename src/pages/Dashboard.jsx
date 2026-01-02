@@ -1,21 +1,7 @@
-import clsx from 'clsx';
-import { Activity, Cpu, HardDrive, Network } from 'lucide-react';
-import { useVyosOperational } from '../hooks/useVyosData';
-import { parseShowInterfaces, parseVersion, parseCpu, parseMemory, parseStorage } from '../utils/parsers';
+import { parseShowInterfaces, parseVersion, parseUptime, parseMemory, parseStorage } from '../utils/parsers';
 
 const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-400">{title}</h3>
-            <div className={`p-2 rounded-lg bg-${color}-500/10`}>
-                <Icon className={`w-5 h-5 text-${color}-500`} />
-            </div>
-        </div>
-        <div className="flex items-baseline">
-            <h2 className="text-3xl font-bold text-white mr-2">{value}</h2>
-            <span className="text-xs text-slate-500">{subtext}</span>
-        </div>
-    </div>
+// ... (lines 6-18 unchanged)
 );
 
 export default function Dashboard() {
@@ -24,18 +10,14 @@ export default function Dashboard() {
     const { data: versionRaw } = useVyosOperational(['system', 'image'], ['version'], 'show');
     const versionDisplay = parseVersion(versionRaw);
 
-    // System Stats (Text Parsing)
-    // 'show system cpu' returns hardware info. 'show monitoring cpu' might return utilization?
-    // If that fails, we might just have to accept N/A or try 'show system uptime' for load avg.
-    const { data: cpuRaw } = useVyosOperational(['monitoring', 'cpu'], ['monitoring', 'cpu'], 'show');
+    // System Stats
+    // 'show system cpu' is hardware info. 'monitoring cpu' is blank.
+    // Fallback to 'show system uptime' for Load Average.
+    const { data: uptimeRaw } = useVyosOperational(['system', 'uptime'], ['system', 'uptime'], 'show');
     const { data: memRaw } = useVyosOperational(['system', 'memory'], ['system', 'memory'], 'show');
-    // Try 'system storage usage' -> likely mapped to ['system', 'storage'] if that works, or we iterate.
-    // Let's guess ['system', 'storage'] maps to 'show system storage' which is valid in 1.5? OR 'disk'.
-    // If 'show system storage' is invalid, we might need a better guess. 'show system storage usage' 
-    // likely map is ['system', 'storage', 'usage']
     const { data: storageRaw } = useVyosOperational(['system', 'storage', 'usage'], ['system', 'storage'], 'show');
 
-    const cpuUsage = parseCpu(cpuRaw);
+    const loadAvg = parseUptime(uptimeRaw);
     const memUsage = parseMemory(memRaw);
     const diskUsage = parseStorage(storageRaw);
 
@@ -97,11 +79,11 @@ export default function Dashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
-                    title="CPU Usage"
-                    value={cpuUsage}
+                    title="System Load"
+                    value={loadAvg}
                     icon={Cpu}
                     color="blue"
-                    subtext={cpuUsage !== "N/A" ? "Load Load" : "Monitoring"}
+                    subtext={loadAvg !== "N/A" ? "1 min avg" : "Monitoring"}
                 />
                 <StatCard
                     title="Memory"
@@ -187,8 +169,8 @@ export default function Dashboard() {
             {/* Debugging Raw Op Data */}
             <div className="bg-black/50 p-4 rounded text-xs font-mono text-green-400 overflow-auto max-h-40 space-y-4">
                 <div>
-                    <strong className="text-white block">Debug - CPU Raw:</strong>
-                    <pre>{typeof cpuRaw === 'string' ? cpuRaw : JSON.stringify(cpuRaw)}</pre>
+                    <strong className="text-white block">Debug - Uptime/Load Raw:</strong>
+                    <pre>{typeof uptimeRaw === 'string' ? uptimeRaw : JSON.stringify(uptimeRaw)}</pre>
                 </div>
                 <div>
                     <strong className="text-white block">Debug - Memory Raw:</strong>

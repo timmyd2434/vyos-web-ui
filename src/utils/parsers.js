@@ -151,3 +151,19 @@ export const parseStorage = (text) => {
 
     return 'N/A';
 }
+
+/**
+ * Parses 'show system uptime'
+ * Example: 22:30:10 up 3 days, 10:20,  1 user,  load average: 0.00, 0.01, 0.05
+ */
+export const parseUptime = (text) => {
+    if (!text || typeof text !== 'string') return 'N/A';
+
+    // Match "load average: 0.00"
+    const match = text.match(/load average:\s*([\d\.]+)/);
+    if (match) {
+        return match[1];
+    }
+
+    return 'N/A';
+};
