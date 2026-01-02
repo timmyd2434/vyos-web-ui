@@ -183,9 +183,23 @@ export default function Dashboard() {
                 </div>
             </div>
             {/* Debugging Raw Op Data */}
-            <div className="bg-black/50 p-4 rounded text-xs font-mono text-green-400 overflow-auto max-h-40">
-                <p className="text-white mb-1">Debug - Raw Op Data:</p>
-                {typeof opData === 'string' ? opData : JSON.stringify(opData, null, 2)}
+            <div className="bg-black/50 p-4 rounded text-xs font-mono text-green-400 overflow-auto max-h-40 space-y-4">
+                <div>
+                    <strong className="text-white block">Debug - CPU Raw:</strong>
+                    <pre>{typeof cpuRaw === 'string' ? cpuRaw : JSON.stringify(cpuRaw)}</pre>
+                </div>
+                <div>
+                    <strong className="text-white block">Debug - Memory Raw:</strong>
+                    <pre>{typeof memRaw === 'string' ? memRaw : JSON.stringify(memRaw)}</pre>
+                </div>
+                <div>
+                    <strong className="text-white block">Debug - Storage Raw:</strong>
+                    <pre>{typeof storageRaw === 'string' ? storageRaw : JSON.stringify(storageRaw)}</pre>
+                </div>
+                <div>
+                    <strong className="text-white block">Debug - Interfaces Op Data:</strong>
+                    <pre>{typeof opData === 'string' ? opData : JSON.stringify(opData)}</pre>
+                </div>
             </div>
         </div>
     );
