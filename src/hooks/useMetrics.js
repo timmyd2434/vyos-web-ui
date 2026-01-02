@@ -56,9 +56,10 @@ export const useTrafficRate = (countersObj) => {
  * Hook to maintain a timeseries history array for recharts.
  * @param {any} value - Current value to create a point for.
  * @param {number} maxPoints - Maximum history length.
+ * @param {any} trigger - Optional dependency to force update if value is static.
  * @returns {Array} Array of data points.
  */
-export const useHistory = (value, maxPoints = 20) => {
+export const useHistory = (value, maxPoints = 20, trigger = null) => {
     const [history, setHistory] = useState([]);
 
     useEffect(() => {
@@ -75,23 +76,27 @@ export const useHistory = (value, maxPoints = 20) => {
                 point = { time: now, value: value };
             }
 
+            // Simple de-duping of timestamps if updates fire too fast, OR we accept it.
+            // For now, accept it. If triggers are aligned with 5s poll, it is fine.
+
             const newHistory = [...prev, point];
             if (newHistory.length > maxPoints) {
                 return newHistory.slice(newHistory.length - maxPoints);
             }
             return newHistory;
         });
-    }, [value, maxPoints]);
+    }, [value, maxPoints, trigger]);
 
     return history;
 };
 
 /**
  * Hook to maintain multiple timeseries histories.
- * @param {Object} dataMap - { key1: value1, key2: value2 } where value expected to be object.
+ * @param {Object} dataMap - { key1: value1, key2: value2 }
  * @param {number} maxPoints
+ * @param {any} trigger - Optional dependency to force update.
  */
-export const useMultiHistory = (dataMap, maxPoints = 20) => {
+export const useMultiHistory = (dataMap, maxPoints = 20, trigger = null) => {
     const [histories, setHistories] = useState({});
 
     // Deep compare dependency
@@ -119,7 +124,7 @@ export const useMultiHistory = (dataMap, maxPoints = 20) => {
             });
             return next;
         });
-    }, [dataHash, maxPoints]);
+    }, [dataHash, maxPoints, trigger]);
 
     return histories;
 };
