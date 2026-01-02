@@ -20,9 +20,10 @@ export const useVyosOperational = (keys, command, opType = 'show') => {
             });
 
             if (!response.success && response.error) {
-                // Some endpoints return success: false but with data? rarely.
+                console.error("VyOS API Error for:", command, response.error);
                 throw new Error(response.error);
             }
+            console.log(`[VyOS] ${opType} ${JSON.stringify(command)} Result:`, response.data);
             return response.data;
         },
         enabled: !!connection,
