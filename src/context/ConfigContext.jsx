@@ -10,8 +10,25 @@ export const ConfigProvider = ({ children }) => {
     const [isCommitting, setIsCommitting] = useState(false);
     const [lastError, setLastError] = useState(null);
 
-    const addChange = (description, ops) => {
-        // ops can be a single op object or array of ops
+    const addChange = (arg1, arg2) => {
+        let description = 'Configuration Change';
+        let ops;
+
+        if (arg2) {
+            // Called as (description, ops)
+            description = arg1;
+            ops = arg2;
+        } else {
+            // Called as (ops) only
+            ops = arg1;
+            // Generate basic description
+            const firstOp = Array.isArray(ops) ? ops[0] : ops;
+            if (firstOp && firstOp.path) {
+                const pathStr = firstOp.path.length > 2 ? '...' + firstOp.path.slice(-2).join(' ') : firstOp.path.join(' ');
+                description = `${firstOp.op.toUpperCase()} ${pathStr}`;
+            }
+        }
+
         const newOps = Array.isArray(ops) ? ops : [ops];
         const change = {
             id: Date.now() + Math.random(),
