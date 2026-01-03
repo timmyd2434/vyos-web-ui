@@ -115,13 +115,11 @@ export default function DhcpConfig() {
         const parentNetwork = networks.find(n => n.name === netName);
         const isPendingParent = parentNetwork?.isPending;
 
-        // If parent network was pending, also set its description if it has one
-        if (isPendingParent && parentNetwork.description) {
-            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', netName, 'description', parentNetwork.description] });
-        }
-
         // VyOS requires at least one property on a subnet to create the node
         // Setting any property will automatically create parent network + subnet nodes
+
+        // IMPORTANT: Stage subnet commands FIRST, then network description at the end
+        // VyOS processes commands sequentially - network needs subnet to exist first
 
         // Range (most common - set first)
         if (rangeStart && rangeStop) {
@@ -159,6 +157,12 @@ export default function DhcpConfig() {
         if (!modal.data && !hasAnyProperty) {
             // New subnet with no other properties - set a default description
             stageCommand({ op: 'set', path: [...basePath, 'description', 'Created via Web UI'] });
+        }
+
+        // FINALLY: Set network description AFTER subnet is fully configured
+        // This ensures VyOS has a valid network+subnet before adding metadata
+        if (isPendingParent && parentNetwork.description) {
+            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', netName, 'description', parentNetwork.description] });
         }
 
         closeModal();
