@@ -121,7 +121,16 @@ export default function DhcpConfig() {
         // IMPORTANT: Stage subnet commands FIRST, then network description at the end
         // VyOS processes commands sequentially - network needs subnet to exist first
 
-        // Range (most common - set first)
+        // CRITICAL: VyOS requires a unique subnet-id for DHCP subnets
+        // Generate one from the CIDR (use it as a simple numeric ID)
+        // For subnet 192.168.1.0/24, use a hash or just increment from 1
+        const subnetId = Math.abs(cidr.split('').reduce((a, b) => {
+            a = ((a << 5) - a) + b.charCodeAt(0);
+            return a & a;
+        }, 0));
+        stageCommand({ op: 'set', path: [...basePath, 'subnet-id', subnetId.toString()] });
+
+        // Range (set after subnet-id is established)
         if (rangeStart && rangeStop) {
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'start', rangeStart] });
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'stop', rangeStop] });
