@@ -138,26 +138,26 @@ export default function DhcpConfig() {
             stageCommand({ op: 'delete', path: [...basePath, 'range', '0'] });
         }
 
-        // Default Router
+        // Default Router (under 'option' in VyOS structure)
         if (defaultRouter && defaultRouter.trim()) {
-            stageCommand({ op: 'set', path: [...basePath, 'default-router', defaultRouter] });
-        } else if (modal.data?.['default-router']) {
-            stageCommand({ op: 'delete', path: [...basePath, 'default-router'] });
+            stageCommand({ op: 'set', path: [...basePath, 'option', 'default-router', defaultRouter] });
+        } else if (modal.data?.option?.['default-router']) {
+            stageCommand({ op: 'delete', path: [...basePath, 'option', 'default-router'] });
         }
 
-        // Name Servers
+        // Name Servers (under 'option' in VyOS structure)
         const nsArray = Array.isArray(nameServer) ? nameServer.filter(Boolean) : (nameServer ? [nameServer] : []);
         if (nsArray.length > 0) {
-            if (modal.data?.['name-server']) {
-                stageCommand({ op: 'delete', path: [...basePath, 'name-server'] });
+            if (modal.data?.option?.['name-server']) {
+                stageCommand({ op: 'delete', path: [...basePath, 'option', 'name-server'] });
             }
             nsArray.forEach(ns => {
                 if (ns.trim()) {
-                    stageCommand({ op: 'set', path: [...basePath, 'name-server', ns.trim()] });
+                    stageCommand({ op: 'set', path: [...basePath, 'option', 'name-server', ns.trim()] });
                 }
             });
-        } else if (modal.data?.['name-server']) {
-            stageCommand({ op: 'delete', path: [...basePath, 'name-server'] });
+        } else if (modal.data?.option?.['name-server']) {
+            stageCommand({ op: 'delete', path: [...basePath, 'option', 'name-server'] });
         }
 
         // Ensure new subnets have at least one property
