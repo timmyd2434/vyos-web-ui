@@ -103,7 +103,11 @@ export default function DhcpConfig() {
     };
 
     const handleSaveSubnet = (formData) => {
+        console.log('[DHCP] handleSaveSubnet called with formData:', JSON.stringify(formData, null, 2));
+
         const { cidr, defaultRouter, nameServer, rangeStart, rangeStop } = formData;
+        console.log('[DHCP] Extracted values:', { cidr, defaultRouter, nameServer, rangeStart, rangeStop });
+
         const netName = modal.parent;
         const basePath = ['service', 'dhcp-server', 'shared-network-name', netName, 'subnet', cidr];
 
