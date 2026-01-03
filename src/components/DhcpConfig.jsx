@@ -122,12 +122,11 @@ export default function DhcpConfig() {
         // VyOS processes commands sequentially - network needs subnet to exist first
 
         // CRITICAL: VyOS requires a unique subnet-id for DHCP subnets
-        // Generate one from the CIDR (use it as a simple numeric ID)
-        // For subnet 192.168.1.0/24, use a hash or just increment from 1
-        const subnetId = Math.abs(cidr.split('').reduce((a, b) => {
-            a = ((a << 5) - a) + b.charCodeAt(0);
-            return a & a;
-        }, 0));
+        // Generate a simple numeric ID from the CIDR
+        // For 192.168.1.0/24, extract the third octet (1) or create a simple ID
+        const cidrParts = cidr.split('/')[0].split('.');
+        const subnetId = parseInt(cidrParts[2]) * 256 + parseInt(cidrParts[3]);
+
         stageCommand({ op: 'set', path: [...basePath, 'subnet-id', subnetId.toString()] });
 
         // Range (set after subnet-id is established)
