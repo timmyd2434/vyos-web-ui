@@ -211,6 +211,55 @@ export default function DhcpConfig() {
                 )}
             </Modal>
 
+            {/* Global DHCP Server Settings */}
+            <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 mb-6">
+                <h2 className="text-lg font-medium text-white mb-4 flex items-center">
+                    <Server className="w-5 h-5 mr-2 text-blue-400" />
+                    DHCP Server Settings
+                </h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                            Listen Address
+                            <span className="text-slate-600 ml-2">(IP address for DHCP server to listen on)</span>
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="e.g. 192.168.1.1"
+                                className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                defaultValue={data?.['listen-address'] ? (Array.isArray(data['listen-address']) ? data['listen-address'].join(', ') : data['listen-address']) : ''}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const value = e.target.value.trim();
+                                        if (value) {
+                                            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'listen-address', value] });
+                                            e.target.value = '';
+                                        }
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={(e) => {
+                                    const input = e.target.previousElementSibling;
+                                    const value = input.value.trim();
+                                    if (value) {
+                                        stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'listen-address', value] });
+                                        input.value = '';
+                                    }
+                                }}
+                                className="px-4 py-2 bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg transition-colors text-sm font-medium"
+                            >
+                                Set
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2">
+                            Press Enter or click Set to configure. This is required for DHCP server to function.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium text-white">Shared Networks</h2>
                 <button
