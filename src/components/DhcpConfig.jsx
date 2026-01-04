@@ -196,17 +196,11 @@ export default function DhcpConfig() {
         // IMPORTANT: Stage subnet commands FIRST, then network description at the end
         // VyOS processes commands sequentially - network needs subnet to exist first
 
-        // CRITICAL: VyOS requires a unique subnet-id for DHCP subnets
-        // Use simple sequential IDs (1, 2, 3...) as per VyOS documentation
-        // Count existing subnets across all networks to generate next ID
-        const existingSubnetCount = networks.reduce((count, net) => count + net.subnets.length, 0);
-        // If editing, use existing subnet-id or generate new one
-        const subnetId = modal.data?.['subnet-id'] || (existingSubnetCount + 1).toString();
-        console.log('[DHCP] Generated subnet-id:', subnetId, '(existing subnets:', existingSubnetCount, ')');
+        // SET DHCP PARAMETERS FIRST (range, gateway, DNS)
+        // Then set subnet-id as metadata afterward
+        // This ensures VyOS has a valid subnet configuration before accepting subnet-id
 
-        stageCommand({ op: 'set', path: [...basePath, 'subnet-id', subnetId] });
-
-        // Range (set after subnet-id is established)
+        // Range - SET THIS FIRST to establish the subnet
         if (rangeStart && rangeStop) {
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'start', rangeStart] });
             stageCommand({ op: 'set', path: [...basePath, 'range', '0', 'stop', rangeStop] });
@@ -236,6 +230,17 @@ export default function DhcpConfig() {
         } else if (modal.data?.option?.['name-server']) {
             stageCommand({ op: 'delete', path: [...basePath, 'option', 'name-server'] });
         }
+
+        // NOW set subnet-id AFTER the subnet has actual DHCP configuration
+        // VyOS requires a unique subnet-id for DHCP subnets
+        // Use simple sequential IDs (1, 2, 3...) as per VyOS documentation
+        // Count existing subnets across all networks to generate next ID
+        const existingSubnetCount = networks.reduce((count, net) => count + net.subnets.length, 0);
+        // If editing, use existing subnet-id or generate new one
+        const subnetId = modal.data?.['subnet-id'] || (existingSubnetCount + 1).toString();
+        console.log('[DHCP] Generated subnet-id:', subnetId, '(existing subnets:', existingSubnetCount, ')');
+
+        stageCommand({ op: 'set', path: [...basePath, 'subnet-id', subnetId] });
 
         // Ensure new subnets have at least one property
         const hasAnyProperty = (rangeStart && rangeStop) || (defaultRouter && defaultRouter.trim()) || nsArray.length > 0;
