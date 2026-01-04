@@ -1,14 +1,27 @@
+```
 import { useState } from 'react';
 import { ArrowLeft, Plus, Trash2, Edit2, Shield, Check, X } from 'lucide-react';
 import Modal from './Modal';
 import clsx from 'clsx';
 import { useConfig } from '../context/ConfigContext';
+import { useVyosOperational } from '../hooks/useVyosData';
 
 export default function ChainEditor({ chain, onBack }) {
     const { stageCommand } = useConfig();
+    
+    // Fetch fresh data for this chain so we can auto-update after commits
+    const { data: chainData, isLoading, refetch } = useVyosOperational(
+        ['firewall', ...chain.chainPath],
+        ['firewall', ...chain.chainPath],
+        'showConfig',
+        { refetchInterval: false }
+    );
+    
+    // Use fetched data if available, otherwise fall back to passed data
+    const currentData = chainData || chain.rawData;
 
     // Parse rules from chain data
-    const rules = Object.entries(chain.rawData.rule || {})
+    const rules = Object.entries(currentData.rule || {})
         .map(([num, data]) => ({ number: parseInt(num), ...data }))
         .sort((a, b) => a.number - b.number);
 
@@ -75,7 +88,7 @@ export default function ChainEditor({ chain, onBack }) {
     };
 
     const handleDelete = (ruleNumber) => {
-        if (!confirm(`Delete rule ${ruleNumber}?`)) return;
+        if (!confirm(`Delete rule ${ ruleNumber }?`)) return;
 
         const basePath = ['firewall', ...chain.chainPath, 'rule', ruleNumber.toString()];
         stageCommand({ op: 'delete', path: basePath });
@@ -183,10 +196,11 @@ export default function ChainEditor({ chain, onBack }) {
                     <h2 className="text-xl font-bold text-white">{chain.name}</h2>
                     <p className="text-slate-400 text-sm">{chain.description} • {rules.length} rules configured</p>
                 </div>
-                <div className={`px-3 py-1.5 rounded-lg text-sm font-bold uppercase ${chain.defaultAction === 'accept'
-                    ? 'bg-emerald-500/10 text-emerald-400'
-                    : 'bg-red-500/10 text-red-400'
-                    }`}>
+                <div className={`px - 3 py - 1.5 rounded - lg text - sm font - bold uppercase ${
+    chain.defaultAction === 'accept'
+    ? 'bg-emerald-500/10 text-emerald-400'
+    : 'bg-red-500/10 text-red-400'
+} `}>
                     Default: {chain.defaultAction}
                 </div>
             </div>
@@ -304,7 +318,7 @@ export default function ChainEditor({ chain, onBack }) {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={editingRule ? `Edit Rule ${editingRule.number}` : "Add Rule"}
+                title={editingRule ? `Edit Rule ${ editingRule.number } ` : "Add Rule"}
             >
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
