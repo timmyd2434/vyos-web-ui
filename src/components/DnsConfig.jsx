@@ -4,6 +4,43 @@ import { useConfig } from '../context/ConfigContext';
 import { Save, RefreshCw, Plus, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 
+// Move Section component outside to prevent re-creation on every render
+const Section = ({ title, list, newItem, setNewItem, onAdd, onRemove, placeholder }) => (
+    <div className="space-y-2">
+        <label className="text-sm font-medium text-slate-400">{title}</label>
+        <div className="flex gap-2 mb-2">
+            <input
+                type="text"
+                value={newItem}
+                onChange={(e) => setNewItem(e.target.value)}
+                placeholder={placeholder}
+                className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                onKeyDown={(e) => e.key === 'Enter' && onAdd()}
+            />
+            <button
+                onClick={onAdd}
+                className="p-2 bg-slate-800 text-blue-400 hover:text-white hover:bg-blue-600 rounded transition-colors"
+            >
+                <Plus className="w-4 h-4" />
+            </button>
+        </div>
+        <div className="space-y-1">
+            {list.map(item => (
+                <div key={item} className="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded border border-slate-800 group">
+                    <span className="text-sm text-slate-300 font-mono">{item}</span>
+                    <button
+                        onClick={() => onRemove(item)}
+                        className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            ))}
+            {list.length === 0 && <div className="text-xs text-slate-600 italic">No entries configured</div>}
+        </div>
+    </div>
+);
+
 export default function DnsConfig() {
     const { data: config, isLoading, refetch, isRefetching } = useVyosOperational(
         ['service', 'dns', 'forwarding'],
@@ -91,42 +128,6 @@ export default function DnsConfig() {
     };
 
     if (isLoading) return <div className="text-slate-500 py-8 text-center">Loading DNS configuration...</div>;
-
-    const Section = ({ title, list, newItem, setNewItem, onAdd, onRemove, placeholder }) => (
-        <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">{title}</label>
-            <div className="flex gap-2 mb-2">
-                <input
-                    type="text"
-                    value={newItem}
-                    onChange={(e) => setNewItem(e.target.value)}
-                    placeholder={placeholder}
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
-                    onKeyDown={(e) => e.key === 'Enter' && onAdd()}
-                />
-                <button
-                    onClick={onAdd}
-                    className="p-2 bg-slate-800 text-blue-400 hover:text-white hover:bg-blue-600 rounded transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
-            </div>
-            <div className="space-y-1">
-                {list.map(item => (
-                    <div key={item} className="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded border border-slate-800 group">
-                        <span className="text-sm text-slate-300 font-mono">{item}</span>
-                        <button
-                            onClick={() => onRemove(item)}
-                            className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-                ))}
-                {list.length === 0 && <div className="text-xs text-slate-600 italic">No entries configured</div>}
-            </div>
-        </div>
-    );
 
     return (
         <div className="space-y-6">
