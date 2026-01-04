@@ -30,6 +30,9 @@ export default function DhcpConfig() {
     // State for pending networks (created in UI but not yet committed to VyOS)
     const [pendingNetworks, setPendingNetworks] = useState([]);
 
+    // State for selected gateway (when configuring DHCP for a specific interface)
+    const [selectedGateway, setSelectedGateway] = useState(null);
+
     // Modal State
     const [modal, setModal] = useState({ type: null, isOpen: false, data: null, parent: null });
 
@@ -228,6 +231,15 @@ export default function DhcpConfig() {
             stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'shared-network-name', netName, 'description', parentNetwork.description] });
         }
 
+        // LAST: Set listen-address after network+subnet exist (VyOS requirement)
+        // VyOS requires at least one shared network before accepting listen-address
+        if (selectedGateway && !modal.data) {
+            // Only set for new subnets when configuring from gateway selector
+            stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'listen-address', selectedGateway.gatewayIP] });
+            // Clear selected gateway after use
+            setSelectedGateway(null);
+        }
+
         closeModal();
     };
 
@@ -303,9 +315,9 @@ export default function DhcpConfig() {
                                         </div>
                                         <button
                                             onClick={() => {
-                                                // Auto-configure DHCP for this interface
-                                                stageCommand({ op: 'set', path: ['service', 'dhcp-server', 'listen-address', gw.gatewayIP] });
-                                                // Pre-populate subnet form with this gateway's details
+                                                // Save gateway info for later use when creating subnet
+                                                setSelectedGateway(gw);
+                                                // Open network creation form
                                                 openCreateNetwork();
                                             }}
                                             className="px-3 py-1.5 bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg transition-colors text-sm font-medium"
