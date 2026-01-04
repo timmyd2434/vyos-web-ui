@@ -91,27 +91,30 @@ export default function DnsConfig() {
     };
 
     const handleSave = () => {
-        // VyOS requires 'allow-from' for DNS forwarding to be valid
-        // We must set required fields BEFORE optional ones
-        // Also, don't delete lists if we're just going to re-add them (wasteful and can cause errors)
+        // VyOS requires BOTH 'listen-address' AND 'allow-from' for DNS forwarding to be valid
+        // Validate required fields before staging commands
+
+        // Check if we're trying to configure DNS forwarding
+        const isConfiguringDNS = listenAddresses.length > 0 || allowFrom.length > 0 || nameServers.length > 0 || cacheSize !== (config?.['cache-size'] || '0');
+
+        if (isConfiguringDNS) {
+            // If configuring DNS, both listen-address and allow-from are required
+            if (listenAddresses.length === 0) {
+                alert('DNS Forwarding requires at least one Listen Address.\n\nPlease add a listen address (e.g., 192.168.1.1) before staging changes.');
+                return;
+            }
+            if (allowFrom.length === 0) {
+                alert('DNS Forwarding requires at least one Allow-From network.\n\nPlease add an allowed network (e.g., 192.168.1.0/24) before staging changes.');
+                return;
+            }
+        }
 
         const commands = [];
 
-        // CRITICAL: Set allow-from FIRST if we have any entries (it's required by VyOS)
-        if (allowFrom.length > 0) {
-            // Only delete if we're replacing with different values
-            if (config?.['allow-from']) {
-                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
-            }
-            allowFrom.forEach(net => {
-                commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'allow-from', net] });
-            });
-        } else if (config?.['allow-from']) {
-            // User removed all allow-from entries - delete it
-            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
-        }
+        // CRITICAL: Set BOTH listen-address AND allow-from together (both are required by VyOS)
+        // Set them in the order: listen-address first, then allow-from
 
-        // Listen Address
+        // Listen Address (required)
         if (listenAddresses.length > 0) {
             if (config?.['listen-address']) {
                 commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
@@ -123,7 +126,19 @@ export default function DnsConfig() {
             commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
         }
 
-        // Name Servers
+        // Allow From (required)
+        if (allowFrom.length > 0) {
+            if (config?.['allow-from']) {
+                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
+            }
+            allowFrom.forEach(net => {
+                commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'allow-from', net] });
+            });
+        } else if (config?.['allow-from']) {
+            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
+        }
+
+        // Name Servers (optional)
         if (nameServers.length > 0) {
             if (config?.['name-server']) {
                 commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'name-server'] });
@@ -135,7 +150,7 @@ export default function DnsConfig() {
             commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'name-server'] });
         }
 
-        // Cache Size (set AFTER required fields)
+        // Cache Size (optional, set AFTER required fields)
         if (cacheSize !== config?.['cache-size']) {
             commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'cache-size', cacheSize] });
         }
