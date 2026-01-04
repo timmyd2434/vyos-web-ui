@@ -106,16 +106,15 @@ export default function ChainEditor({ chain, onBack }) {
         }
 
         // Connection States (established, related, new, invalid)
+        // Don't delete if we're setting new values - VyOS will replace them
+        // Only delete if user has removed all states
         if (formData.states.length > 0) {
-            // Delete existing states first if editing
-            if (editingRule?.state) {
-                commands.push({ op: 'delete', path: [...basePath, 'state'] });
-            }
-            // Add new states
+            // Just SET the states - VyOS will replace existing ones
             formData.states.forEach(state => {
                 commands.push({ op: 'set', path: [...basePath, 'state', state] });
             });
         } else if (editingRule?.state) {
+            // User removed all states - delete the node
             commands.push({ op: 'delete', path: [...basePath, 'state'] });
         }
 
@@ -177,8 +176,8 @@ export default function ChainEditor({ chain, onBack }) {
                     <p className="text-slate-400 text-sm">{chain.description} • {rules.length} rules configured</p>
                 </div>
                 <div className={`px-3 py-1.5 rounded-lg text-sm font-bold uppercase ${chain.defaultAction === 'accept'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-red-500/10 text-red-400'
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-red-500/10 text-red-400'
                     }`}>
                     Default: {chain.defaultAction}
                 </div>
