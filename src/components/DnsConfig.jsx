@@ -91,38 +91,54 @@ export default function DnsConfig() {
     };
 
     const handleSave = () => {
-        // Construct commands
-        // 1. Delete current node to reset (cleanest for lists) or specific deletes
-        // Use 'set' commands for what we want. 
-        // Note: In VyOS, to replace a list you often need to delete the parent node or specific values.
-
-        // Strategy: We will generate a 'delete' for the whole forwarding node and re-create it? 
-        // Risky if we miss params. better to delete specific lists.
+        // VyOS requires 'allow-from' for DNS forwarding to be valid
+        // We must set required fields BEFORE optional ones
+        // Also, don't delete lists if we're just going to re-add them (wasteful and can cause errors)
 
         const commands = [];
 
-        // Cache Size
+        // CRITICAL: Set allow-from FIRST if we have any entries (it's required by VyOS)
+        if (allowFrom.length > 0) {
+            // Only delete if we're replacing with different values
+            if (config?.['allow-from']) {
+                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
+            }
+            allowFrom.forEach(net => {
+                commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'allow-from', net] });
+            });
+        } else if (config?.['allow-from']) {
+            // User removed all allow-from entries - delete it
+            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
+        }
+
+        // Listen Address
+        if (listenAddresses.length > 0) {
+            if (config?.['listen-address']) {
+                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
+            }
+            listenAddresses.forEach(addr => {
+                commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'listen-address', addr] });
+            });
+        } else if (config?.['listen-address']) {
+            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
+        }
+
+        // Name Servers
+        if (nameServers.length > 0) {
+            if (config?.['name-server']) {
+                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'name-server'] });
+            }
+            nameServers.forEach(ns => {
+                commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'name-server', ns] });
+            });
+        } else if (config?.['name-server']) {
+            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'name-server'] });
+        }
+
+        // Cache Size (set AFTER required fields)
         if (cacheSize !== config?.['cache-size']) {
             commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'cache-size', cacheSize] });
         }
-
-        // Listen Address (Diff logic is hard, so we delete list and re-add)
-        commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
-        listenAddresses.forEach(addr => {
-            commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'listen-address', addr] });
-        });
-
-        // Allow From
-        commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
-        allowFrom.forEach(net => {
-            commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'allow-from', net] });
-        });
-
-        // Name Servers
-        commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'name-server'] });
-        nameServers.forEach(ns => {
-            commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'name-server', ns] });
-        });
 
         commands.forEach(cmd => stageCommand(cmd));
     };
