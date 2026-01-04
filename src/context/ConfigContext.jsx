@@ -57,35 +57,21 @@ export const ConfigProvider = ({ children }) => {
         setLastError(null);
 
         try {
-            // Flatten all ops
+            // Flatten all ops into a single array
             const allOps = pendingChanges.flatMap(c => c.ops);
 
-            // Execute all changes
-            // Note: In a real VyOS API we might validly send these as a batch
-            // For now, we iterate, but batching is preferred if supported by the endpoint wrapper
+            // VyOS HTTP API supports batching multiple commands in a single request
+            // This is CRITICAL for interdependent required fields (e.g., DNS forwarding's
+            // listen-address and allow-from must both be present before committing)
 
-            // We will assume our 'configure' helper can take a list of ops if modified, 
-            // OR we just send them sequentially. 
-            // The VyOS HTTP API usually expects ONE 'data' object which can be a list of commands.
-            // Let's assume we can send the array of ops if we adjust the service slightly, 
-            // OR we just send multiple requests. Sending multiple requests is safer for error reporting per-item 
-            // but violates "transactional" atomicity if one fails halfway.
+            // Send all commands as a batch (array) in a single API call
+            const res = await configure(connection.url, connection.key, allOps);
 
-            // Best approach for Atomic Commit: Send ALL ops in one request if possible.
-            // If the API supports it.
-
-            // Let's assume we send them one by one for this prototype to ensure feedback.
-            // But we will optimize later.
-
-            for (const op of allOps) {
-                const res = await configure(connection.url, connection.key, op);
-                if (!res.success) {
-                    throw new Error(`Failed to execute: ${JSON.stringify(op.path)} - ${res.error}`);
-                }
+            if (!res.success) {
+                throw new Error(`Failed to commit configuration: ${res.error}`);
             }
 
-            // Explicit Save if needed? User usually requests "Save" separately.
-            // We'll clear changes on success.
+            // Clear changes on success
             setPendingChanges([]);
 
             // Invalidate all queries to trigger automatic refetch
