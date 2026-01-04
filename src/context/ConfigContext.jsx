@@ -110,6 +110,7 @@ export const ConfigProvider = ({ children }) => {
     return (
         <ConfigContext.Provider value={{
             pendingChanges,
+            addChange,           // Export both names for consistency
             stageCommand: addChange,
             removeChange,
             discardAll,
