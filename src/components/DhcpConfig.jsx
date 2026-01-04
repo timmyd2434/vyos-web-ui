@@ -162,16 +162,33 @@ export default function DhcpConfig() {
 
     const handleSaveSubnet = (formData) => {
         console.log('[DHCP] handleSaveSubnet called with formData:', JSON.stringify(formData, null, 2));
+        console.log('[DHCP] modal.parent (network name):', modal.parent);
 
         const { cidr, defaultRouter, nameServer, rangeStart, rangeStop } = formData;
         console.log('[DHCP] Extracted values:', { cidr, defaultRouter, nameServer, rangeStart, rangeStop });
 
         const netName = modal.parent;
+
+        // Validation: Ensure we have required data
+        if (!netName || !netName.trim()) {
+            console.error('[DHCP] ERROR: Network name is empty! Cannot save subnet.');
+            alert('Error: Network name is missing. Please try again or refresh the page.');
+            return;
+        }
+
+        if (!cidr || !cidr.trim()) {
+            console.error('[DHCP] ERROR: Subnet CIDR is empty! Cannot save subnet.');
+            alert('Error: Subnet CIDR is required.');
+            return;
+        }
+
         const basePath = ['service', 'dhcp-server', 'shared-network-name', netName, 'subnet', cidr];
+        console.log('[DHCP] Base path for commands:', basePath);
 
         // Check if parent network is pending (UI-only)
         const parentNetwork = networks.find(n => n.name === netName);
         const isPendingParent = parentNetwork?.isPending;
+        console.log('[DHCP] Parent network:', parentNetwork?.name, 'isPending:', isPendingParent);
 
         // VyOS requires at least one property on a subnet to create the node
         // Setting any property will automatically create parent network + subnet nodes
@@ -180,12 +197,14 @@ export default function DhcpConfig() {
         // VyOS processes commands sequentially - network needs subnet to exist first
 
         // CRITICAL: VyOS requires a unique subnet-id for DHCP subnets
-        // Generate a simple numeric ID from the CIDR
-        // For 192.168.1.0/24, extract the third octet (1) or create a simple ID
-        const cidrParts = cidr.split('/')[0].split('.');
-        const subnetId = parseInt(cidrParts[2]) * 256 + parseInt(cidrParts[3]);
+        // Use simple sequential IDs (1, 2, 3...) as per VyOS documentation
+        // Count existing subnets across all networks to generate next ID
+        const existingSubnetCount = networks.reduce((count, net) => count + net.subnets.length, 0);
+        // If editing, use existing subnet-id or generate new one
+        const subnetId = modal.data?.['subnet-id'] || (existingSubnetCount + 1).toString();
+        console.log('[DHCP] Generated subnet-id:', subnetId, '(existing subnets:', existingSubnetCount, ')');
 
-        stageCommand({ op: 'set', path: [...basePath, 'subnet-id', subnetId.toString()] });
+        stageCommand({ op: 'set', path: [...basePath, 'subnet-id', subnetId] });
 
         // Range (set after subnet-id is established)
         if (rangeStart && rangeStop) {
@@ -412,7 +431,7 @@ export default function DhcpConfig() {
                                                     Range: {subnet.range ? Object.values(subnet.range).map(r => `${r.start}-${r.stop}`).join(', ') : 'None'}
                                                 </div>
                                                 <div className="text-xs text-slate-500">
-                                                    GW: {subnet['default-router'] || '-'} | DNS: {subnet['name-server'] ? (Array.isArray(subnet['name-server']) ? subnet['name-server'].join(', ') : subnet['name-server']) : '-'}
+                                                    GW: {subnet.option?.['default-router'] || '-'} | DNS: {subnet.option?.['name-server'] ? (Array.isArray(subnet.option['name-server']) ? subnet.option['name-server'].join(', ') : subnet.option['name-server']) : '-'}
                                                 </div>
                                             </div>
                                         </div>

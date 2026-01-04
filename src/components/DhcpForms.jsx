@@ -55,8 +55,13 @@ export function SharedNetworkForm({ initialData, onClose, onSave }) {
 
 export function SubnetForm({ sharedNetworkName, initialData, onClose, onSave }) {
     const [cidr, setCidr] = useState(initialData?.cidr || '');
-    const [gateway, setGateway] = useState(initialData?.['default-router'] || '');
-    const [dns, setDns] = useState(initialData?.['name-server'] || '');
+    // Extract from option object if present
+    const [gateway, setGateway] = useState(initialData?.option?.['default-router'] || '');
+    const [dns, setDns] = useState(() => {
+        const ns = initialData?.option?.['name-server'];
+        if (!ns) return '';
+        return Array.isArray(ns) ? ns.join(', ') : ns;
+    });
     // Flatten range for editing. We'll simplify to one range for this UI version.
     const [rangeStart, setRangeStart] = useState('');
     const [rangeStop, setRangeStop] = useState('');
