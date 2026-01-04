@@ -81,6 +81,12 @@ export default function NatRuleEditor({ isOpen, onClose, onSave, rule, natType, 
             return;
         }
 
+        // Validate port requirements
+        if ((formData.sourcePort || formData.destinationPort) && (!formData.protocol || formData.protocol === 'all')) {
+            alert('Protocol must be specified (TCP, UDP, etc.) when using source or destination ports');
+            return;
+        }
+
         onSave(formData);
     };
 

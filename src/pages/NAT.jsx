@@ -20,6 +20,8 @@ export default function NAT() {
 
     // Parse NAT rules from VyOS config
     const parseNatRules = (data, type) => {
+        if (!data || typeof data !== 'object') return [];
+
         const rules = [];
         const typeData = data?.[type]?.rule;
 
@@ -110,20 +112,28 @@ export default function NAT() {
             });
         }
 
-        // Description
-        if (description) {
-            ops.push({
-                op: 'set',
-                path: [...basePath, 'description', description]
-            });
-        }
-
-        // Interface
+        // Interface (required)
         if (iface) {
             const interfaceKey = type === 'source' ? 'outbound-interface' : 'inbound-interface';
             ops.push({
                 op: 'set',
                 path: [...basePath, interfaceKey, 'name', iface]
+            });
+        }
+
+        // Translation address (required)
+        if (translationAddress) {
+            ops.push({
+                op: 'set',
+                path: [...basePath, 'translation', 'address', translationAddress]
+            });
+        }
+
+        // Protocol - MUST be set before ports
+        if (protocol && protocol !== 'all') {
+            ops.push({
+                op: 'set',
+                path: [...basePath, 'protocol', protocol]
             });
         }
 
@@ -135,8 +145,8 @@ export default function NAT() {
             });
         }
 
-        // Source port
-        if (sourcePort) {
+        // Source port (only if protocol is set)
+        if (sourcePort && protocol && protocol !== 'all') {
             ops.push({
                 op: 'set',
                 path: [...basePath, 'source', 'port', sourcePort]
@@ -151,27 +161,11 @@ export default function NAT() {
             });
         }
 
-        // Destination port
-        if (destinationPort) {
+        // Destination port (only if protocol is set)
+        if (destinationPort && protocol && protocol !== 'all') {
             ops.push({
                 op: 'set',
                 path: [...basePath, 'destination', 'port', destinationPort]
-            });
-        }
-
-        // Protocol
-        if (protocol && protocol !== 'all') {
-            ops.push({
-                op: 'set',
-                path: [...basePath, 'protocol', protocol]
-            });
-        }
-
-        // Translation address
-        if (translationAddress) {
-            ops.push({
-                op: 'set',
-                path: [...basePath, 'translation', 'address', translationAddress]
             });
         }
 
@@ -180,6 +174,14 @@ export default function NAT() {
             ops.push({
                 op: 'set',
                 path: [...basePath, 'translation', 'port', translationPort]
+            });
+        }
+
+        // Description (optional, set last)
+        if (description) {
+            ops.push({
+                op: 'set',
+                path: [...basePath, 'description', description]
             });
         }
 
@@ -259,6 +261,12 @@ export default function NAT() {
                     <div className="p-8 text-center text-slate-400">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
                         Loading NAT rules...
+                    </div>
+                ) : error ? (
+                    <div className="p-8 text-center text-slate-400">
+                        <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p className="font-medium">No NAT configuration found</p>
+                        <p className="text-sm mt-2">Click "Add NAT Rule" to create your first NAT rule</p>
                     </div>
                 ) : currentRules.length === 0 ? (
                     <div className="p-8 text-center text-slate-400">
