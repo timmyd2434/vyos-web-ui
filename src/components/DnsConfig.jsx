@@ -111,36 +111,39 @@ export default function DnsConfig() {
 
         const commands = [];
 
-        // CRITICAL: Set BOTH listen-address AND allow-from together (both are required by VyOS)
-        // Set them in the order: listen-address first, then allow-from
+        // CRITICAL: For required fields (listen-address, allow-from), we CANNOT delete them
+        // if DNS forwarding is already active. VyOS will reject the deletion.
+        // Instead, we just SET the new values directly. VyOS will replace them.
 
         // Listen Address (required)
         if (listenAddresses.length > 0) {
-            if (config?.['listen-address']) {
-                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
-            }
+            // Don't delete first - just set the new values
+            // VyOS will replace the list
             listenAddresses.forEach(addr => {
                 commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'listen-address', addr] });
             });
         } else if (config?.['listen-address']) {
-            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'listen-address'] });
+            // User wants to remove DNS forwarding entirely - this will fail without allow-from also being deleted
+            // So we should warn the user or handle this case specially
+            alert('Cannot remove all listen addresses while DNS forwarding is configured.\n\nTo disable DNS forwarding, use the VyOS CLI:\ndelete service dns forwarding');
+            return;
         }
 
         // Allow From (required)
         if (allowFrom.length > 0) {
-            if (config?.['allow-from']) {
-                commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
-            }
+            // Don't delete first - just set the new values
             allowFrom.forEach(net => {
                 commands.push({ op: 'set', path: ['service', 'dns', 'forwarding', 'allow-from', net] });
             });
         } else if (config?.['allow-from']) {
-            commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'allow-from'] });
+            alert('Cannot remove all allow-from networks while DNS forwarding is configured.\n\nTo disable DNS forwarding, use the VyOS CLI:\ndelete service dns forwarding');
+            return;
         }
 
-        // Name Servers (optional)
+        // Name Servers (optional - can be deleted)
         if (nameServers.length > 0) {
             if (config?.['name-server']) {
+                // Delete the old list first, then add new values
                 commands.push({ op: 'delete', path: ['service', 'dns', 'forwarding', 'name-server'] });
             }
             nameServers.forEach(ns => {
