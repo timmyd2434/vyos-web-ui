@@ -18,6 +18,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         md: 'max-w-xl',
         lg: 'max-w-3xl',
         xl: 'max-w-5xl',
+        large: 'max-w-5xl',
     };
 
     return (
