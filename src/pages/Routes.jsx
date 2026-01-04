@@ -7,8 +7,8 @@ import clsx from 'clsx';
 
 export default function Routes() {
     const { data: configData, isLoading, error, refetch } = useVyosOperational(
-        ['protocols', 'static', 'route'],
-        ['protocols', 'static', 'route'],
+        ['protocols', 'static'],
+        ['protocols', 'static'],
         'showConfig'
     );
 
@@ -29,10 +29,12 @@ export default function Routes() {
 
     // Parse routes from VyOS config data
     const parseRoutes = (data) => {
-        if (!data || typeof data !== 'object') return [];
+        // Extract the route object from protocols.static.route
+        const routeData = data?.route;
+        if (!routeData || typeof routeData !== 'object') return [];
 
         const routes = [];
-        Object.entries(data).forEach(([destination, routeConfig]) => {
+        Object.entries(routeData).forEach(([destination, routeConfig]) => {
             if (routeConfig && typeof routeConfig === 'object') {
                 // Check for next-hop IP addresses
                 if (routeConfig['next-hop']) {
@@ -258,8 +260,10 @@ export default function Routes() {
                         Loading routes...
                     </div>
                 ) : error ? (
-                    <div className="p-8 text-center text-red-400">
-                        Error loading routes: {error.message}
+                    <div className="p-8 text-center text-slate-400">
+                        <Route className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No static routes configured</p>
+                        <p className="text-sm mt-2">Click "Add Route" to create your first static route</p>
                     </div>
                 ) : routes.length === 0 ? (
                     <div className="p-8 text-center text-slate-400">
