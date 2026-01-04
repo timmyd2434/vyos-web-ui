@@ -1,11 +1,13 @@
 import { createContext, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { configure } from '../services/vyosApi';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ConfigContext = createContext(null);
 
 export const ConfigProvider = ({ children }) => {
     const { connection } = useAuth();
+    const queryClient = useQueryClient();
     const [pendingChanges, setPendingChanges] = useState([]);
     const [isCommitting, setIsCommitting] = useState(false);
     const [lastError, setLastError] = useState(null);
@@ -85,6 +87,11 @@ export const ConfigProvider = ({ children }) => {
             // Explicit Save if needed? User usually requests "Save" separately.
             // We'll clear changes on success.
             setPendingChanges([]);
+
+            // Invalidate all queries to trigger automatic refetch
+            // This ensures all components show updated data after commits
+            queryClient.invalidateQueries();
+
             return true;
         } catch (err) {
             console.error(err);
