@@ -1,14 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Network, Shield, Settings, Terminal, Activity } from 'lucide-react';
+import { Home, Network, Shield, Settings, Activity, Route } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAVIGATION = [
     { name: 'Dashboard', to: '/dashboard', icon: Home },
     { name: 'Interfaces', to: '/interfaces', icon: Network },
     { name: 'Firewall', to: '/firewall', icon: Shield },
+    { name: 'Routes', to: '/routes', icon: Route },
     { name: 'Services', to: '/services', icon: Activity },
     { name: 'System', to: '/system', icon: Settings },
-    { name: 'Terminal', to: '/terminal', icon: Terminal },
 ];
 
 export default function Sidebar() {
