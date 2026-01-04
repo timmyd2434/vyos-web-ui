@@ -41,15 +41,19 @@ export default function DhcpConfig() {
     };
 
     // Transform VyOS data to array
-    const vyosNetworks = data ? Object.entries(data).map(([name, config]) => ({
-        name,
-        description: config.description || '',
-        subnets: config.subnet ? Object.entries(config.subnet).map(([cidr, subConfig]) => ({
-            cidr,
-            ...subConfig
-        })) : [],
-        isPending: false
-    })) : [];
+    // VyOS returns: { "shared-network-name": { "Lan": {...}, "Guest": {...} } }
+    // We need to extract the actual network names from inside shared-network-name
+    const vyosNetworks = data?.['shared-network-name']
+        ? Object.entries(data['shared-network-name']).map(([name, config]) => ({
+            name,
+            description: config.description || '',
+            subnets: config.subnet ? Object.entries(config.subnet).map(([cidr, subConfig]) => ({
+                cidr,
+                ...subConfig
+            })) : [],
+            isPending: false
+        }))
+        : [];
 
     // Detect available gateway interfaces (IPs ending in .1)
     const getAvailableGateways = () => {
