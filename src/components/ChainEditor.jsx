@@ -84,6 +84,13 @@ export default function ChainEditor({ chain, onBack }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        // Validate: VyOS requires protocol (tcp/udp) if ports are specified
+        const hasPort = formData.sourcePort || formData.destPort;
+        if (hasPort && formData.protocol === 'all') {
+            alert('Protocol cannot be "All" when specifying ports.\n\nPlease select TCP or UDP.');
+            return;
+        }
+
         // Build commands for the rule
         const basePath = ['firewall', ...chain.chainPath, 'rule', formData.number.toString()];
         const commands = [];
@@ -98,10 +105,11 @@ export default function ChainEditor({ chain, onBack }) {
             commands.push({ op: 'delete', path: [...basePath, 'description'] });
         }
 
-        // Protocol
+        // Protocol - MUST be set BEFORE ports if ports are specified
         if (formData.protocol && formData.protocol !== 'all') {
             commands.push({ op: 'set', path: [...basePath, 'protocol', formData.protocol] });
-        } else if (editingRule?.protocol) {
+        } else if (editingRule?.protocol && !hasPort) {
+            // Only delete protocol if no ports are specified
             commands.push({ op: 'delete', path: [...basePath, 'protocol'] });
         }
 
@@ -125,7 +133,7 @@ export default function ChainEditor({ chain, onBack }) {
             commands.push({ op: 'delete', path: [...basePath, 'source', 'address'] });
         }
 
-        // Source Port
+        // Source Port (only if protocol is set)
         if (formData.sourcePort) {
             commands.push({ op: 'set', path: [...basePath, 'source', 'port', formData.sourcePort] });
         } else if (editingRule?.source?.port) {
@@ -139,7 +147,7 @@ export default function ChainEditor({ chain, onBack }) {
             commands.push({ op: 'delete', path: [...basePath, 'destination', 'address'] });
         }
 
-        // Destination Port
+        // Destination Port (only if protocol is set)
         if (formData.destPort) {
             commands.push({ op: 'set', path: [...basePath, 'destination', 'port', formData.destPort] });
         } else if (editingRule?.destination?.port) {
