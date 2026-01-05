@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Network, Shield, Settings, Activity, Route, ArrowRightLeft, Gauge } from 'lucide-react';
+import { Home, Network, Shield, Settings, Activity, Route, ArrowRightLeft, Gauge, GitBranch } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAVIGATION = [
@@ -9,6 +9,7 @@ const NAVIGATION = [
     { name: 'Routes', to: '/routes', icon: Route },
     { name: 'NAT', to: '/nat', icon: ArrowRightLeft },
     { name: 'QoS', to: '/qos', icon: Gauge },
+    { name: 'Policy Routing', to: '/policy-routing', icon: GitBranch },
     { name: 'Services', to: '/services', icon: Activity },
     { name: 'System', to: '/system', icon: Settings },
 ];
