@@ -66,7 +66,7 @@ export default function PolicyRouting() {
     const policies = parsePolicies(policyConfig);
 
     // Handlers
-    const handleCreatePolicy = () => {
+    const handleCreatePolicy = async () => {
         const name = prompt('Enter policy name:');
         if (!name) return;
 
@@ -78,9 +78,15 @@ export default function PolicyRouting() {
         }];
 
         addChange(`Create ${type === 'route6' ? 'IPv6' : 'IPv4'} policy ${name}`, ops);
+
+        // Commit and refresh immediately
+        const success = await commit();
+        if (success) {
+            await refetch();
+        }
     };
 
-    const handleDeletePolicy = (policy) => {
+    const handleDeletePolicy = async (policy) => {
         if (!confirm(`Delete policy "${policy.name}"?`)) return;
 
         const ops = [{
@@ -92,6 +98,12 @@ export default function PolicyRouting() {
 
         if (selectedPolicy?.name === policy.name) {
             setSelectedPolicy(null);
+        }
+
+        // Commit and refresh immediately
+        const success = await commit();
+        if (success) {
+            await refetch();
         }
     };
 
@@ -110,7 +122,7 @@ export default function PolicyRouting() {
         setEditorOpen(true);
     };
 
-    const handleDeleteRule = (rule) => {
+    const handleDeleteRule = async (rule) => {
         if (!confirm(`Delete rule ${rule.number}?`)) return;
 
         const ops = [{
@@ -119,6 +131,12 @@ export default function PolicyRouting() {
         }];
 
         addChange(`Delete rule ${rule.number} from ${selectedPolicy.name}`, ops);
+
+        // Commit and refresh immediately
+        const success = await commit();
+        if (success) {
+            await refetch();
+        }
     };
 
     const handleSaveRule = async (ruleData) => {
@@ -192,14 +210,11 @@ export default function PolicyRouting() {
 
         addChange(description_text, ops);
 
-        // Commit the changes immediately and force refresh
+        // Commit the changes and force immediate refresh
         const success = await commit();
         if (success) {
-            // Invalidate and refetch the policy query immediately
-            await queryClient.invalidateQueries({ queryKey: ['policy'] });
-
-            // Small delay to ensure data refreshes before closing modal
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Force an immediate refetch of the policy data
+            await refetch();
         }
 
         setEditorOpen(false);
