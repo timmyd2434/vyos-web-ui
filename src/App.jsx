@@ -7,6 +7,7 @@ import Interfaces from './pages/Interfaces';
 import Firewall from './pages/Firewall';
 import RoutesPage from './pages/Routes';
 import NAT from './pages/NAT';
+import QoS from './pages/QoS';
 import Services from './pages/Services';
 import System from './pages/System';
 import MainLayout from './layouts/MainLayout';
@@ -51,6 +52,7 @@ function AppRoutes() {
           <Route path="/firewall" element={<Firewall />} />
           <Route path="/routes" element={<RoutesPage />} />
           <Route path="/nat" element={<NAT />} />
+          <Route path="/qos" element={<QoS />} />
           <Route path="/services" element={<Services />} />
           <Route path="/system" element={<System />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
