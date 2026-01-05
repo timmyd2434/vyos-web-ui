@@ -197,6 +197,9 @@ export default function PolicyRouting() {
         if (success) {
             // Invalidate and refetch the policy query immediately
             await queryClient.invalidateQueries({ queryKey: ['policy'] });
+
+            // Small delay to ensure data refreshes before closing modal
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
 
         setEditorOpen(false);
