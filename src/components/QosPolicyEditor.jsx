@@ -107,41 +107,16 @@ export default function QosPolicyEditor({ isOpen, onClose, policy, policyType, e
                 });
             }
         } else if (formData.type === 'fq-codel') {
-            // FQ-CoDel policy
-            if (formData.codel_quantum) {
-                ops.push({
-                    op: 'set',
-                    path: [...basePath, 'quantum', formData.codel_quantum]
-                });
-            }
+            // FQ-CoDel policy - VyOS uses defaults, parameters not configurable via standalone policy
+            // FQ-CoDel works well with its built-in defaults
+            // To tune FQ-CoDel, it should be embedded in a Shaper policy's queue-type
 
-            if (formData.codel_flows) {
-                ops.push({
-                    op: 'set',
-                    path: [...basePath, 'flows', formData.codel_flows]
-                });
-            }
-
-            if (formData.codel_interval) {
-                ops.push({
-                    op: 'set',
-                    path: [...basePath, 'interval', formData.codel_interval]
-                });
-            }
-
-            if (formData.codel_target) {
-                ops.push({
-                    op: 'set',
-                    path: [...basePath, 'target', formData.codel_target]
-                });
-            }
-
-            if (formData.codel_limit) {
-                ops.push({
-                    op: 'set',
-                    path: [...basePath, 'limit', formData.codel_limit]
-                });
-            }
+            // Just create the policy - VyOS will use optimal defaults
+            // We still need at least one command to create the policy
+            ops.push({
+                op: 'set',
+                path: [...basePath]
+            });
         } else if (formData.type === 'limiter') {
             // Limiter policy
             if (formData.limiter_defaultBandwidth) {
@@ -280,78 +255,23 @@ export default function QosPolicyEditor({ isOpen, onClose, policy, policyType, e
                 {/* FQ-CoDel-specific fields */}
                 {formData.type === 'fq-codel' && (
                     <div className="space-y-4">
-                        <div className="p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
-                            <p className="text-sm text-slate-300">
-                                <strong className="text-blue-400">FQ-CoDel</strong> works well with default settings.
-                                Tune these parameters only if needed for specific network conditions.
+                        <div className="p-4 bg-blue-900/20 border border-blue-800/30 rounded-lg">
+                            <p className="text-sm text-slate-300 mb-3">
+                                <strong className="text-blue-400">FQ-CoDel</strong> is a "set it and forget it" policy that works excellently with its built-in defaults.
                             </p>
+                            <ul className="text-sm text-slate-400 space-y-2 list-disc list-inside">
+                                <li>Automatically distributes traffic into 1024 fair queues</li>
+                                <li>Reduces bufferbloat and latency without configuration</li>
+                                <li>Optimized for 10Gbit speeds by default</li>
+                                <li>Best used as an egress (outbound) policy</li>
+                            </ul>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Quantum (bytes)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.codel_quantum}
-                                    onChange={(e) => updateField('codel_quantum', e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="1514 (default)"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Flows (sub-queues)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.codel_flows}
-                                    onChange={(e) => updateField('codel_flows', e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="1024 (default)"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Interval
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.codel_interval}
-                                    onChange={(e) => updateField('codel_interval', e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="100ms (default)"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Target Delay
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.codel_target}
-                                    onChange={(e) => updateField('codel_target', e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="5ms (default)"
-                                />
-                            </div>
-
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Queue Limit (packets)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.codel_limit}
-                                    onChange={(e) => updateField('codel_limit', e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="10240 (default)"
-                                />
-                            </div>
+                        <div className="p-4 bg-slate-800/50 rounded-lg">
+                            <p className="text-xs text-slate-400">
+                                <strong className="text-slate-300">Note:</strong> FQ-CoDel parameters cannot be tuned via standalone policy.
+                                For advanced tuning, embed FQ-CoDel as a <code className="px-1 py-0.5 bg-slate-700 rounded text-blue-400">queue-type</code> within a Shaper policy's class configuration.
+                            </p>
                         </div>
                     </div>
                 )}
