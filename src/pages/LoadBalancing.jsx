@@ -4,6 +4,7 @@ import { useVyosOperational } from '../hooks/useVyosData';
 import { useConfig } from '../context/ConfigContext';
 import { Activity, Plus, Trash2, Edit, Network } from 'lucide-react';
 import WanRuleEditor from '../components/WanRuleEditor';
+import WanInterfaceEditor from '../components/WanInterfaceEditor';
 import clsx from 'clsx';
 
 export default function LoadBalancing() {
@@ -19,6 +20,8 @@ export default function LoadBalancing() {
 
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingRule, setEditingRule] = useState(null);
+    const [interfaceEditorOpen, setInterfaceEditorOpen] = useState(false);
+    const [editingInterface, setEditingInterface] = useState(null);
 
     // Parse load balancing config
     const parseConfig = (data) => {
@@ -135,6 +138,67 @@ export default function LoadBalancing() {
         setEditingRule(null);
     };
 
+    const handleSaveInterface = async (ifaceData) => {
+        const { name, nexthop, failureCount, successCount, tests } = ifaceData;
+
+        const ops = [];
+        const basePath = ['load-balancing', 'wan', 'interface-health', name];
+
+        // Nexthop
+        ops.push({
+            op: 'set',
+            path: [...basePath, 'nexthop', nexthop]
+        });
+
+        // Failure count
+        if (failureCount && failureCount !== '1') {
+            ops.push({
+                op: 'set',
+                path: [...basePath, 'failure-count', failureCount]
+            });
+        }
+
+        // Success count
+        if (successCount && successCount !== '1') {
+            ops.push({
+                op: 'set',
+                path: [...basePath, 'success-count', successCount]
+            });
+        }
+
+        //Health tests
+        if (tests && tests.length > 0) {
+            tests.forEach(test => {
+                ops.push({
+                    op: 'set',
+                    path: [...basePath, 'test', test.number, 'type', test.type]
+                });
+                ops.push({
+                    op: 'set',
+                    path: [...basePath, 'test', test.number, 'target', test.target]
+                });
+                if (test.type === 'ping' && test.respTime) {
+                    ops.push({
+                        op: 'set',
+                        path: [...basePath, 'test', test.number, 'resp-time', test.respTime]
+                    });
+                }
+            });
+        }
+
+        const desc = editingInterface
+            ? `Edit WAN interface ${name}`
+            : `Add WAN interface ${name}`;
+
+        addChange(desc, ops);
+
+        const success = await commit();
+        if (success) await refetch();
+
+        setInterfaceEditorOpen(false);
+        setEditingInterface(null);
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -157,10 +221,22 @@ export default function LoadBalancing() {
 
             {/* Interfaces Card */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
-                    <Network className="w-5 h-5 mr-2 text-green-400" />
-                    WAN Interfaces
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-white flex items-center">
+                        <Network className="w-5 h-5 mr-2 text-green-400" />
+                        WAN Interfaces
+                    </h2>
+                    <button
+                        onClick={() => {
+                            setEditingInterface(null);
+                            setInterfaceEditorOpen(true);
+                        }}
+                        className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm font-medium"
+                    >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add Interface
+                    </button>
+                </div>
 
                 {isLoading ? (
                     <div className="text-center text-slate-400 py-8">
@@ -171,10 +247,7 @@ export default function LoadBalancing() {
                     <div className="text-center text-slate-400 py-8">
                         <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
                         <p className="font-medium">No interfaces configured</p>
-                        <p className="text-sm mt-2">Configure interface health checks using CLI:</p>
-                        <code className="text-xs text-blue-400 mt-2 block">
-                            set load-balancing wan interface-health eth0 nexthop 'dhcp'
-                        </code>
+                        <p className="text-sm mt-2">Click "Add Interface" to configure your  WAN interfaces</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -188,12 +261,23 @@ export default function LoadBalancing() {
                                         <Network className="w-5 h-5 text-cyan-400" />
                                         <span className="font-mono font-semibold text-white">{iface.name}</span>
                                     </div>
-                                    <button
-                                        onClick={() => handleDeleteInterface(iface)}
-                                        className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setEditingInterface(iface);
+                                                setInterfaceEditorOpen(true);
+                                            }}
+                                            className="p-1 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded transition-colors"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteInterface(iface)}
+                                            className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-1 text-sm">
@@ -312,6 +396,19 @@ export default function LoadBalancing() {
                     onSave={handleSaveRule}
                     rule={editingRule}
                     availableInterfaces={interfaces}
+                />
+            )}
+
+            {/* Interface Editor */}
+            {interfaceEditorOpen && (
+                <WanInterfaceEditor
+                    isOpen={interfaceEditorOpen}
+                    onClose={() => {
+                        setInterfaceEditorOpen(false);
+                        setEditingInterface(null);
+                    }}
+                    onSave={handleSaveInterface}
+                    interface={editingInterface}
                 />
             )}
         </div>
