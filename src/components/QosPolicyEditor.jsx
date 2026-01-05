@@ -111,7 +111,7 @@ export default function QosPolicyEditor({ isOpen, onClose, policy, policyType, e
             if (formData.codel_quantum) {
                 ops.push({
                     op: 'set',
-                    path: [...basePath, 'codel-quantum', formData.codel_quantum]
+                    path: [...basePath, 'quantum', formData.codel_quantum]
                 });
             }
 
