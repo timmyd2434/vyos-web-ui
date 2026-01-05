@@ -6,13 +6,13 @@ import PolicyRuleEditor from '../components/PolicyRuleEditor';
 import clsx from 'clsx';
 
 export default function PolicyRouting() {
-    const { data: policyConfig, isLoading, error } = useVyosOperational(
+    const { data: policyConfig, isLoading, error, refetch } = useVyosOperational(
         ['policy'],
         ['policy'],
         'showConfig'
     );
 
-    const { addChange } = useConfig();
+    const { addChange, commit } = useConfig();
 
     const [selectedPolicy, setSelectedPolicy] = useState(null);
     const [editorOpen, setEditorOpen] = useState(false);
@@ -118,7 +118,7 @@ export default function PolicyRouting() {
         addChange(`Delete rule ${rule.number} from ${selectedPolicy.name}`, ops);
     };
 
-    const handleSaveRule = (ruleData) => {
+    const handleSaveRule = async (ruleData) => {
         const { number, description, action, sourceAddress, destinationAddress,
             protocol, destinationPort, table, mark } = ruleData;
 
@@ -188,6 +188,16 @@ export default function PolicyRouting() {
             : `Add rule ${number} to ${selectedPolicy.name}`;
 
         addChange(description_text, ops);
+
+        // Commit the changes immediately and refetch
+        const success = await commit();
+        if (success) {
+            // Wait a moment for VyOS to process, then refetch
+            setTimeout(() => {
+                refetch();
+            }, 500);
+        }
+
         setEditorOpen(false);
         setEditingRule(null);
     };
