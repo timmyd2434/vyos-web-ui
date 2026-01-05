@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useVyosOperational } from '../hooks/useVyosData';
 import { useConfig } from '../context/ConfigContext';
 import { GitBranch, Plus, Trash2, Edit, List } from 'lucide-react';
@@ -6,6 +7,8 @@ import PolicyRuleEditor from '../components/PolicyRuleEditor';
 import clsx from 'clsx';
 
 export default function PolicyRouting() {
+    const queryClient = useQueryClient();
+
     const { data: policyConfig, isLoading, error, refetch } = useVyosOperational(
         ['policy'],
         ['policy'],
@@ -189,13 +192,11 @@ export default function PolicyRouting() {
 
         addChange(description_text, ops);
 
-        // Commit the changes immediately and refetch
+        // Commit the changes immediately and force refresh
         const success = await commit();
         if (success) {
-            // Wait a moment for VyOS to process, then refetch
-            setTimeout(() => {
-                refetch();
-            }, 500);
+            // Invalidate and refetch the policy query immediately
+            await queryClient.invalidateQueries({ queryKey: ['policy'] });
         }
 
         setEditorOpen(false);
