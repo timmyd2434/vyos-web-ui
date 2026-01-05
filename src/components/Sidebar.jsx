@@ -10,6 +10,7 @@ const NAVIGATION = [
     { name: 'NAT', to: '/nat', icon: ArrowRightLeft },
     { name: 'QoS', to: '/qos', icon: Gauge },
     { name: 'Policy Routing', to: '/policy-routing', icon: GitBranch },
+    { name: 'Load Balancing', to: '/load-balancing', icon: Activity },
     { name: 'Services', to: '/services', icon: Activity },
     { name: 'System', to: '/system', icon: Settings },
 ];

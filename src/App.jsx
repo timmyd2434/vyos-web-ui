@@ -9,6 +9,7 @@ import RoutesPage from './pages/Routes';
 import NAT from './pages/NAT';
 import QoS from './pages/QoS';
 import PolicyRouting from './pages/PolicyRouting';
+import LoadBalancing from './pages/LoadBalancing';
 import Services from './pages/Services';
 import System from './pages/System';
 import MainLayout from './layouts/MainLayout';
@@ -55,6 +56,7 @@ function AppRoutes() {
           <Route path="/nat" element={<NAT />} />
           <Route path="/qos" element={<QoS />} />
           <Route path="/policy-routing" element={<PolicyRouting />} />
+          <Route path="/load-balancing" element={<LoadBalancing />} />
           <Route path="/services" element={<Services />} />
           <Route path="/system" element={<System />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
