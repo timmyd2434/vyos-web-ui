@@ -10,10 +10,15 @@ export default function Login() {
 
     const [url, setUrl] = useState('');
     const [key, setKey] = useState('');
+    const [useProxy, setUseProxy] = useState(true); // Default to proxy mode in development
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const success = await login(url, key);
+
+        // If using proxy mode, use the local proxy URL
+        const connectionUrl = useProxy ? '/vyos-api' : url;
+
+        const success = await login(connectionUrl, key);
         if (success) {
             navigate('/dashboard');
         }
@@ -43,23 +48,43 @@ export default function Login() {
                         )}
 
                         <div className="space-y-4">
-                            {/* URL Input */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Router IP Address</label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Server className="h-5 w-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
-                                    </div>
+                            {/* Development Mode Toggle */}
+                            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                <label className="flex items-center cursor-pointer">
                                     <input
-                                        type="text"
-                                        required
-                                        value={url}
-                                        onChange={(e) => setUrl(e.target.value)}
-                                        className="block w-full pl-10 pr-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-slate-500 transition-all outline-none"
-                                        placeholder="192.168.1.1 (https:// is added automatically)"
+                                        type="checkbox"
+                                        checked={useProxy}
+                                        onChange={(e) => setUseProxy(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500 focus:ring-2"
                                     />
-                                </div>
+                                    <span className="ml-2 text-sm text-blue-300 font-medium">
+                                        Use Development Proxy (Recommended)
+                                    </span>
+                                </label>
+                                <p className="text-xs text-slate-400 mt-1 ml-6">
+                                    Bypasses CORS and SSL certificate issues during local development
+                                </p>
                             </div>
+
+                            {/* URL Input - Only show if NOT using proxy */}
+                            {!useProxy && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Router IP Address</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Server className="h-5 w-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            required={!useProxy}
+                                            value={url}
+                                            onChange={(e) => setUrl(e.target.value)}
+                                            className="block w-full pl-10 pr-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-slate-500 transition-all outline-none"
+                                            placeholder="192.168.1.1 (https:// is added automatically)"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             {/* API Key Input */}
                             <div>

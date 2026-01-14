@@ -21,13 +21,16 @@ export const AuthProvider = ({ children }) => {
             // Clean and normalize URL
             let cleanUrl = url.trim();
 
-            // Auto-prepend https:// if no protocol specified
-            if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-                cleanUrl = 'https://' + cleanUrl;
-            }
+            // Skip protocol normalization for local proxy paths
+            if (!cleanUrl.startsWith('/')) {
+                // Auto-prepend https:// if no protocol specified and not a proxy path
+                if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+                    cleanUrl = 'https://' + cleanUrl;
+                }
 
-            // Remove trailing slash
-            cleanUrl = cleanUrl.replace(/\/$/, '');
+                // Remove trailing slash
+                cleanUrl = cleanUrl.replace(/\/$/, '');
+            }
 
             // Verify connection by fetching basic system info
             const response = await retrieve(cleanUrl, key, {
