@@ -9,17 +9,47 @@ const ENDPOINTS = {
 };
 
 /**
- * Creates a configured Axios instance with timeout and retry settings
- * @param {string} baseUrl - The base URL of the router (e.g., https://192.168.1.1)
- * @returns {import('axios').AxiosInstance}
+ * Determines if we should use the development proxy server
+ * @returns {boolean}
  */
-const createClient = (baseUrl) => {
-    return axios.create({
-        baseURL: baseUrl,
-        timeout: 15000, // 15 second timeout to prevent indefinite hangs
-        validateStatus: (status) => status < 500, // Don't throw on 4xx errors
-        // Do NOT set Content-Type manually for FormData, axios/browser handles it with boundary
-    });
+const useProxy = () => {
+    return import.meta.env.DEV; // true in development mode
+};
+
+/**
+ * Makes a request through the proxy server or directly to the router
+ * @param {string} url - Router base URL (e.g., https://192.168.0.29)
+ * @param {string} endpoint - API endpoint (e.g., /retrieve)
+ * @param {FormData} formData - Request data
+ * @returns {Promise}
+ */
+const makeRequest = async (url, endpoint, formData) => {
+    if (useProxy()) {
+        // Development mode: use proxy server
+        const targetUrl = `${url}${endpoint}`;
+
+        // Convert FormData to plain object for JSON transmission
+        const formDataObj = {};
+        for (const [key, value] of formData.entries()) {
+            formDataObj[key] = value;
+        }
+
+        const response = await axios.post('http://localhost:3001/api/proxy', {
+            targetUrl,
+            method: 'POST',
+            formData: formDataObj,
+        });
+
+        return response;
+    } else {
+        // Production mode: direct connection to router
+        const client = axios.create({
+            baseURL: url,
+            timeout: 15000,
+            validateStatus: (status) => status < 500,
+        });
+        return await client.post(endpoint, formData);
+    }
 };
 
 /**
@@ -83,7 +113,6 @@ const retryWithBackoff = async (fn, maxAttempts = 3) => {
 export const retrieve = async (url, key, opData) => {
     return retryWithBackoff(async () => {
         try {
-            const client = createClient(url);
             const formData = new FormData();
             formData.append('data', JSON.stringify(opData));
             formData.append('key', key);
@@ -91,7 +120,7 @@ export const retrieve = async (url, key, opData) => {
             // VyOS 1.5+: 'show' operational commands must go to /show, 'showConfig' goes to /retrieve
             const endpoint = (opData && opData.op === 'show') ? ENDPOINTS.SHOW : ENDPOINTS.RETRIEVE;
 
-            const response = await client.post(endpoint, formData);
+            const response = await makeRequest(url, endpoint, formData);
             return response.data;
         } catch (error) {
             console.error("VyOS Retrieve Error:", error);
@@ -134,12 +163,11 @@ export const retrieve = async (url, key, opData) => {
 export const configure = async (url, key, opData) => {
     return retryWithBackoff(async () => {
         try {
-            const client = createClient(url);
             const formData = new FormData();
             formData.append('data', JSON.stringify(opData));
             formData.append('key', key);
 
-            const response = await client.post(ENDPOINTS.CONFIGURE, formData);
+            const response = await makeRequest(url, ENDPOINTS.CONFIGURE, formData);
             return response.data;
         } catch (error) {
             console.error("VyOS Configure Error:", error);
@@ -164,10 +192,10 @@ export const configure = async (url, key, opData) => {
 
 // Generic post wrapper if needed
 export const rawPost = async (url, endpoint, key, data) => {
-    const client = createClient(url);
     const formData = new FormData();
     formData.append('data', JSON.stringify(data));
     formData.append('key', key);
-    const response = await client.post(endpoint, formData);
+
+    const response = await makeRequest(url, endpoint, formData);
     return response.data;
 }
