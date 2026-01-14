@@ -25,3 +25,6 @@ dist-ssr
 
 # VyOS ISO
 VyOS_ISO/
+
+# Environment variables
+.env
