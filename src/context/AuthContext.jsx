@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { retrieve } from '../services/vyosApi';
+import { parseVersion, detectFeatures } from '../utils/versionHelpers';
 
 const AuthContext = createContext(null);
 
@@ -30,7 +31,33 @@ export const AuthProvider = ({ children }) => {
                 throw new Error(response.error || 'Authentication failed');
             }
 
-            const connData = { url: cleanUrl, key };
+            // Detect VyOS version and available features
+            let version = 'Unknown';
+            let features = detectFeatures('Unknown');
+
+            try {
+                const versionResponse = await retrieve(cleanUrl, key, {
+                    op: 'show',
+                    path: ['version']
+                });
+
+                if (versionResponse && versionResponse.data) {
+                    version = parseVersion(versionResponse);
+                    features = detectFeatures(version);
+                    console.log('Detected VyOS version:', version);
+                    console.log('Available features:', features);
+                }
+            } catch (versionErr) {
+                // Version detection failed, continue with defaults
+                console.warn('Could not detect VyOS version, using defaults:', versionErr);
+            }
+
+            const connData = {
+                url: cleanUrl,
+                key,
+                version,
+                features
+            };
             setConnection(connData);
             sessionStorage.setItem('vyos_connection', JSON.stringify(connData));
             return true;

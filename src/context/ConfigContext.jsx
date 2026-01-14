@@ -2,6 +2,8 @@ import { createContext, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { configure } from '../services/vyosApi';
 import { useQueryClient } from '@tanstack/react-query';
+import { validateCommand } from '../utils/commandValidator';
+import { parseVyOSError } from '../utils/errorParser';
 
 const ConfigContext = createContext(null);
 
@@ -32,6 +34,17 @@ export const ConfigProvider = ({ children }) => {
         }
 
         const newOps = Array.isArray(ops) ? ops : [ops];
+
+        // Validate all operations before staging
+        for (const op of newOps) {
+            const validation = validateCommand(op);
+            if (!validation.valid) {
+                const errorMsg = `Invalid command: ${validation.errors.join(', ')}`;
+                console.error(errorMsg, op);
+                throw new Error(errorMsg);
+            }
+        }
+
         const change = {
             id: Date.now() + Math.random(),
             description,
@@ -81,7 +94,9 @@ export const ConfigProvider = ({ children }) => {
             return true;
         } catch (err) {
             console.error(err);
-            setLastError(err.message);
+            // Use enhanced error parser for user-friendly messages
+            const friendlyError = parseVyOSError(err);
+            setLastError(friendlyError);
             return false;
         } finally {
             setIsCommitting(false);
@@ -95,7 +110,8 @@ export const ConfigProvider = ({ children }) => {
             if (!res.success) throw new Error(res.error);
             return true;
         } catch (err) {
-            setLastError(err.message);
+            const friendlyError = parseVyOSError(err);
+            setLastError(friendlyError);
             return false;
         }
     };
