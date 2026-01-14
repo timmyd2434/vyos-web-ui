@@ -9,42 +9,47 @@ export const parseShowInterfaces = (text) => {
     const interfaces = [];
 
     lines.forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
+        try {
+            const trimmed = line.trim();
+            if (!trimmed) return;
 
-        // Skip headers / legends
-        if (trimmed.startsWith('Codes:') || trimmed.startsWith('Interface') || trimmed.startsWith('-----') || trimmed.startsWith('default')) return;
+            // Skip headers / legends
+            if (trimmed.startsWith('Codes:') || trimmed.startsWith('Interface') || trimmed.startsWith('-----') || trimmed.startsWith('default')) return;
 
-        // Strategy: Identifying the "S/L" column is key. It usually looks like u/u, u/D, A/D.
-        const slMatch = trimmed.match(/\s([uAD]\/[uAD])(\s|$)/);
-        if (!slMatch) return;
+            // Strategy: Identifying the "S/L" column is key. It usually looks like u/u, u/D, A/D.
+            const slMatch = trimmed.match(/\s([uAD]\/[uAD])(\s|$)/);
+            if (!slMatch) return; // Gracefully skip lines that don't match expected format
 
-        const statusLine = slMatch[1];
-        const statusIndex = slMatch.index;
+            const statusLine = slMatch[1];
+            const statusIndex = slMatch.index;
 
-        // Everything before S/L
-        const preStatus = trimmed.substring(0, statusIndex).trim();
-        // Everything after S/L
-        const description = trimmed.substring(statusIndex + slMatch[0].length).trim();
+            // Everything before S/L
+            const preStatus = trimmed.substring(0, statusIndex).trim();
+            // Everything after S/L
+            const description = trimmed.substring(statusIndex + slMatch[0].length).trim();
 
-        // Parse preStatus parts. It should be: Name [SPACE] IP [SPACE] [Optional MAC/VRF/MTU]
-        const parts = preStatus.split(/\s+/);
-        if (parts.length < 2) return;
+            // Parse preStatus parts. It should be: Name [SPACE] IP [SPACE] [Optional MAC/VRF/MTU]
+            const parts = preStatus.split(/\s+/);
+            if (parts.length < 2) return;
 
-        const name = parts[0];
-        const addressRaw = parts[1];
+            const name = parts[0];
+            const addressRaw = parts[1];
 
-        // Basic validation
-        if (name === 'Interface') return;
+            // Basic validation
+            if (name === 'Interface') return;
 
-        interfaces.push({
-            name: name,
-            address: addressRaw === '-' ? [] : addressRaw.split(','),
-            statusLine: statusLine,
-            state: statusLine.toLowerCase().startsWith('u') ? 'up' : 'down',
-            link: statusLine.toLowerCase().endsWith('u') ? 'up' : 'down',
-            description: description
-        });
+            interfaces.push({
+                name: name,
+                address: addressRaw === '-' ? [] : addressRaw.split(','),
+                statusLine: statusLine,
+                state: statusLine.toLowerCase().startsWith('u') ? 'up' : 'down',
+                link: statusLine.toLowerCase().endsWith('u') ? 'up' : 'down',
+                description: description
+            });
+        } catch (err) {
+            // Don't crash on parse error, just log and skip this line
+            console.warn('Failed to parse interface line:', line, err);
+        }
     });
 
     return interfaces;
@@ -93,20 +98,25 @@ const parseBytes = (str) => {
 export const parseMemory = (text) => {
     if (!text || typeof text !== 'string') return 'N/A';
 
-    // Look for "Total: <val>" and "Used: <val>"
-    // The previous regex was simpler, now we need to match the unit too.
-    const totalMatch = text.match(/Total:\s*([\d\.]+\s*[A-Za-z]+)/i);
-    const usedMatch = text.match(/Used:\s*([\d\.]+\s*[A-Za-z]+)/i);
+    try {
+        // Look for "Total: <val>" and "Used: <val>"
+        // The previous regex was simpler, now we need to match the unit too.
+        const totalMatch = text.match(/Total:\s*([\d\.]+\s*[A-Za-z]+)/i);
+        const usedMatch = text.match(/Used:\s*([\d\.]+\s*[A-Za-z]+)/i);
 
-    if (totalMatch && usedMatch) {
-        const totalMb = parseBytes(totalMatch[1]);
-        const usedMb = parseBytes(usedMatch[1]);
+        if (totalMatch && usedMatch) {
+            const totalMb = parseBytes(totalMatch[1]);
+            const usedMb = parseBytes(usedMatch[1]);
 
-        if (totalMb > 0) {
-            const pct = Math.round((usedMb / totalMb) * 100);
-            return `${pct}%`;
+            if (totalMb > 0) {
+                const pct = Math.round((usedMb / totalMb) * 100);
+                return `${pct}%`;
+            }
         }
+    } catch (err) {
+        console.warn('Failed to parse memory stats:', err);
     }
+
     return 'N/A';
 };
 
@@ -189,30 +199,34 @@ export const parseInterfaceCounters = (text) => {
     const counters = {};
 
     lines.forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
-        if (trimmed.startsWith('Interface') || trimmed.startsWith('-----')) return;
+        try {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            if (trimmed.startsWith('Interface') || trimmed.startsWith('-----')) return;
 
-        // ETH0  123  123  123  123
-        const parts = trimmed.split(/\s+/);
-        if (parts.length >= 5) {
-            const name = parts[0];
-            // Assuming: Name RxPkts RxBytes TxPkts TxBytes
-            // We want RxBytes (idx 2) and TxBytes (idx 4) typically?
-            // Wait, standard Linux 'netstat -i' or similar might differ.
-            // Let's assume standard VyOS 1.x output order:
-            // Int | RxPkts | RxBytes | TxPkts | TxBytes
+            // ETH0  123  123  123  123
+            const parts = trimmed.split(/\s+/);
+            if (parts.length >= 5) {
+                const name = parts[0];
+                // Assuming: Name RxPkts RxBytes TxPkts TxBytes
+                // We want RxBytes (idx 2) and TxBytes (idx 4) typically?
+                // Wait, standard Linux 'netstat -i' or similar might differ.
+                // Let's assume standard VyOS 1.x output order:
+                // Int | RxPkts | RxBytes | TxPkts | TxBytes
 
-            // To be safe against column shifts, we might need mapped columns if header existed.
-            // For now, let's blindly take expected columns.
-            // If the numbers look like bytes (large), we use them.
+                // To be safe against column shifts, we might need mapped columns if header existed.
+                // For now, let's blindly take expected columns.
+                // If the numbers look like bytes (large), we use them.
 
-            const rxBytes = parseInt(parts[2], 10);
-            const txBytes = parseInt(parts[4], 10);
+                const rxBytes = parseInt(parts[2], 10);
+                const txBytes = parseInt(parts[4], 10);
 
-            if (!isNaN(rxBytes) && !isNaN(txBytes)) {
-                counters[name] = { rx: rxBytes, tx: txBytes };
+                if (!isNaN(rxBytes) && !isNaN(txBytes)) {
+                    counters[name] = { rx: rxBytes, tx: txBytes };
+                }
             }
+        } catch (err) {
+            console.warn('Failed to parse counter line:', line, err);
         }
     });
 

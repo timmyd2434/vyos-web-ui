@@ -5,7 +5,9 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [connection, setConnection] = useState(() => {
-        const stored = localStorage.getItem('vyos_connection');
+        // Use sessionStorage instead of localStorage for better security
+        // Credentials will clear when browser tab closes
+        const stored = sessionStorage.getItem('vyos_connection');
         return stored ? JSON.parse(stored) : null;
     });
     const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ export const AuthProvider = ({ children }) => {
 
             const connData = { url: cleanUrl, key };
             setConnection(connData);
-            localStorage.setItem('vyos_connection', JSON.stringify(connData));
+            sessionStorage.setItem('vyos_connection', JSON.stringify(connData));
             return true;
         } catch (err) {
             console.error("Login failed:", err);
@@ -43,7 +45,7 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         setConnection(null);
-        localStorage.removeItem('vyos_connection');
+        sessionStorage.removeItem('vyos_connection');
     };
 
     return (

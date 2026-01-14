@@ -13,6 +13,7 @@ import LoadBalancing from './pages/LoadBalancing';
 import Services from './pages/Services';
 import System from './pages/System';
 import MainLayout from './layouts/MainLayout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const queryClient = new QueryClient();
 
@@ -49,16 +50,16 @@ function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/interfaces" element={<Interfaces />} />
-          <Route path="/firewall" element={<Firewall />} />
-          <Route path="/routes" element={<RoutesPage />} />
-          <Route path="/nat" element={<NAT />} />
-          <Route path="/qos" element={<QoS />} />
-          <Route path="/policy-routing" element={<PolicyRouting />} />
-          <Route path="/load-balancing" element={<LoadBalancing />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/system" element={<System />} />
+          <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <Route path="/interfaces" element={<ErrorBoundary><Interfaces /></ErrorBoundary>} />
+          <Route path="/firewall" element={<ErrorBoundary><Firewall /></ErrorBoundary>} />
+          <Route path="/routes" element={<ErrorBoundary><RoutesPage /></ErrorBoundary>} />
+          <Route path="/nat" element={<ErrorBoundary><NAT /></ErrorBoundary>} />
+          <Route path="/qos" element={<ErrorBoundary><QoS /></ErrorBoundary>} />
+          <Route path="/policy-routing" element={<ErrorBoundary><PolicyRouting /></ErrorBoundary>} />
+          <Route path="/load-balancing" element={<ErrorBoundary><LoadBalancing /></ErrorBoundary>} />
+          <Route path="/services" element={<ErrorBoundary><Services /></ErrorBoundary>} />
+          <Route path="/system" element={<ErrorBoundary><System /></ErrorBoundary>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Route>
