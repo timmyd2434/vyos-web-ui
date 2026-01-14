@@ -8,7 +8,7 @@ export default function Login() {
     const { login, loading, error } = useAuth();
     const navigate = useNavigate();
 
-    const [url, setUrl] = useState('https://');
+    const [url, setUrl] = useState('');
     const [key, setKey] = useState('');
 
     const handleSubmit = async (e) => {
@@ -45,7 +45,7 @@ export default function Login() {
                         <div className="space-y-4">
                             {/* URL Input */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Router URL</label>
+                                <label className="block text-sm font-medium text-slate-400 mb-1.5">Router IP Address</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <Server className="h-5 w-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
@@ -56,7 +56,7 @@ export default function Login() {
                                         value={url}
                                         onChange={(e) => setUrl(e.target.value)}
                                         className="block w-full pl-10 pr-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-slate-500 transition-all outline-none"
-                                        placeholder="https://192.168.1.1 or /vyos"
+                                        placeholder="192.168.1.1 (https:// is added automatically)"
                                     />
                                 </div>
                             </div>

@@ -18,8 +18,16 @@ export const AuthProvider = ({ children }) => {
         setLoading(true);
         setError(null);
         try {
-            // Clean URL
-            const cleanUrl = url.replace(/\/$/, '');
+            // Clean and normalize URL
+            let cleanUrl = url.trim();
+
+            // Auto-prepend https:// if no protocol specified
+            if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+                cleanUrl = 'https://' + cleanUrl;
+            }
+
+            // Remove trailing slash
+            cleanUrl = cleanUrl.replace(/\/$/, '');
 
             // Verify connection by fetching basic system info
             const response = await retrieve(cleanUrl, key, {
@@ -27,8 +35,8 @@ export const AuthProvider = ({ children }) => {
                 path: ['system', 'host-name']
             });
 
-            if (response.success === false) {
-                throw new Error(response.error || 'Authentication failed');
+            if (!response || response.success === false) {
+                throw new Error(response?.error || 'Authentication failed - Unable to connect to router');
             }
 
             // Detect VyOS version and available features
@@ -63,7 +71,37 @@ export const AuthProvider = ({ children }) => {
             return true;
         } catch (err) {
             console.error("Login failed:", err);
-            setError(err.message || "Failed to connect to VyOS router");
+
+            // Enhanced error messages for common issues
+            let errorMessage = err.message || 'Failed to connect to VyOS router';
+
+            // SSL/Certificate errors
+            if (err.message?.includes('ERR_CERT') || err.message?.includes('certificate')) {
+                errorMessage = 'SSL Certificate Error: Your router uses a self-signed certificate. '
+                    + 'Please visit ' + url + ' in a new tab, click "Advanced", then "Proceed" to trust the certificate, '
+                    + 'then try logging in again.';
+            }
+            // Network timeout
+            else if (err.message?.includes('timeout') || err.message?.includes('ECONNABORTED')) {
+                errorMessage = 'Connection timeout: Unable to reach router. '
+                    + 'Verify the IP address is correct and the router is powered on.';
+            }
+            // Network unreachable
+            else if (err.message?.includes('ERR_NETWORK') || err.message?.includes('Network error')) {
+                errorMessage = 'Network error: Cannot reach ' + url + '. '
+                    + 'Ensure you are connected to the same network as the router.';
+            }
+            // Authentication/API errors   
+            else if (err.response?.status === 401) {
+                errorMessage = 'Authentication failed: Invalid API key. '
+                    + 'Please check your API key and try again.';
+            }
+            else if (err.response?.status === 404) {
+                errorMessage = 'API not found: The VyOS HTTP API may not be enabled on this router. '
+                    + 'Enable it with: set service https api';
+            }
+
+            setError(errorMessage);
             return false;
         } finally {
             setLoading(false);
